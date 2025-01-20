@@ -1,6 +1,7 @@
 export namespace main {
 	
 	export class Wine {
+	    Id: string;
 	    Name: string;
 	    Winery: string;
 	    Varietal: string;
@@ -22,6 +23,7 @@ export namespace main {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Id = source["Id"];
 	        this.Name = source["Name"];
 	        this.Winery = source["Winery"];
 	        this.Varietal = source["Varietal"];

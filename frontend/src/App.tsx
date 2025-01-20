@@ -9,6 +9,7 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  RowSelectionState,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -18,17 +19,46 @@ import {
   TableHeader,
   TableRow,
 } from "./components/ui/table.js";
+import { Checkbox } from "./components/ui/checkbox.js";
 
 function App() {
   const [wines, setWines] = useState<Wine[]>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   useEffect(() => {
     GetWines().then((data) => {
       setWines(data);
     });
   }, []);
 
+  useEffect(() => {
+    console.log(rowSelection);
+    console.log(Object.keys(rowSelection).length);
+  }, [rowSelection]);
+
   const columnHelper = createColumnHelper<Wine>();
   const columns = [
+    columnHelper.display({
+      id: "select-col",
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllRowsSelected()}
+          onClick={table.getToggleAllRowsSelectedHandler()}
+          onChange={table.getToggleAllRowsSelectedHandler()} //or getToggleAllPageRowsSelectedHandler
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
+          onClick={row.getToggleSelectedHandler()}
+          onChange={(e) => {
+            const target = e.target as HTMLInputElement; // Type assertion
+            row.getToggleSelectedHandler()(target.checked); // Pass the checked value
+          }}
+        />
+      ),
+    }),
+
     columnHelper.accessor("Varietal", {
       cell: (info) => info.getValue(),
       header: "Varietal",
@@ -79,21 +109,50 @@ function App() {
       header: () => <span>Special Occasion</span>,
     }),
     columnHelper.accessor((row) => row.Notes, {
-      id: "Special Occasion",
+      id: "Notes",
       cell: (info) => info.getValue(),
       header: () => <span>Notes</span>,
     }),
-    columnHelper.accessor((row) => row.Location, {
-      id: "Location",
+    columnHelper.accessor((row) => row.Location?.Name, {
+      id: "Name",
       cell: (info) =>
         info.getValue() == null ? "No Location Specified" : info.getValue(),
-      header: () => <span>Notes</span>,
+      header: () => <span>Row</span>,
+    }),
+    columnHelper.accessor((row) => row.Location?.Row, {
+      id: "Row",
+      cell: (info) =>
+        info.getValue() == null || info.getValue() === ""
+          ? "No Row Specified"
+          : info.getValue(),
+      header: () => <span>Row</span>,
+    }),
+    columnHelper.accessor((row) => row.Location?.Bin, {
+      id: "Bin",
+      cell: (info) =>
+        info.getValue() == null || info.getValue() === ""
+          ? "No Bin Specified"
+          : info.getValue(),
+      header: () => <span>Bin</span>,
+    }),
+    columnHelper.accessor((row) => row.Location?.Code, {
+      id: "Code",
+      cell: (info) =>
+        info.getValue() == null || info.getValue() === ""
+          ? "No Code Specified"
+          : info.getValue(),
+      header: () => <span>Code</span>,
     }),
   ];
   const table = useReactTable({
     data: wines,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    onRowSelectionChange: setRowSelection, //hoist up the row selection state to your own scope
+    state: {
+      rowSelection, //pass the row selection state back to the table instance
+    },
+    getRowId: (row) => row.Id,
   });
 
   return (
@@ -117,7 +176,7 @@ function App() {
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
+            <tr key={row.id} className={"p-11"}>
               {row.getVisibleCells().map((cell) => (
                 <td key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}

@@ -1,6 +1,7 @@
 import { WineLocation } from "./WineLocation";
 
 export interface Wine {
+  Id: string;
   Winery: string;
   Varietal: string;
   Description: string;

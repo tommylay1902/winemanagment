@@ -1,8 +1,11 @@
 package main
 
-import "time"
+import (
+	"time"
+)
 
 type Wine struct {
+	Id              string
 	Name            string
 	Winery          string
 	Varietal        string
