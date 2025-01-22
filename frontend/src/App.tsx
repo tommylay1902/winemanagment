@@ -6,10 +6,13 @@ import { useEffect, useState } from "react";
 import { GetWines } from "../wailsjs/go/main/App.js";
 import { Wine } from "./shared/types/Wine.js";
 import {
+  ColumnSort,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   RowSelectionState,
+  SortingState,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -20,10 +23,16 @@ import {
   TableRow,
 } from "./components/ui/table.js";
 import { Checkbox } from "./components/ui/checkbox.js";
+import {
+  stringToJSDate,
+  stringToTimeStamp,
+  stringToUSDate,
+} from "./shared/util/Date.js";
 
 function App() {
   const [wines, setWines] = useState<Wine[]>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [sorting, setSorting] = useState<SortingState>([]);
   useEffect(() => {
     GetWines().then((data) => {
       setWines(data);
@@ -90,8 +99,26 @@ function App() {
     }),
     columnHelper.accessor((row) => row.DrinkBy, {
       id: "Drink By",
-      cell: (info) => info.getValue(),
+      cell: (info) => stringToUSDate(info.getValue() ? info.getValue() : ""),
       header: () => <span>Drink By</span>,
+      sortingFn: (a, b, columnId) => {
+        const notValidCompareA = !a.original.DrinkBy;
+        const notValidCompareB = !b.original.DrinkBy;
+        const currSort = sorting.find((sort) => sort.id === columnId);
+        if (currSort == undefined) return 0;
+        if (notValidCompareA && notValidCompareB) {
+          return 0;
+        } else if (notValidCompareA) {
+          return currSort.desc ? -1 : 1;
+        } else if (notValidCompareB) {
+          return currSort.desc ? 1 : -1;
+        } else {
+          return (
+            stringToJSDate(a.original.DrinkBy!).getTime() -
+            stringToJSDate(b.original.DrinkBy!).getTime()
+          );
+        }
+      },
     }),
     columnHelper.accessor((row) => row.Price, {
       id: "Price",
@@ -148,21 +175,31 @@ function App() {
     data: wines,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     onRowSelectionChange: setRowSelection, //hoist up the row selection state to your own scope
     state: {
+      sorting,
       rowSelection, //pass the row selection state back to the table instance
     },
+    onSortingChange: setSorting,
     getRowId: (row) => row.Id,
   });
 
   return (
-    <div className="p-2">
+    <div className="p-2 mt-10">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
+                <TableHead
+                  key={header.id}
+                  onClick={(e) => {
+                    const handler = header.column.getToggleSortingHandler();
+                    if (handler) handler(e);
+                  }}
+                  className=" hover:cursor-pointer hover:font-bold"
+                >
                   {header.isPlaceholder
                     ? null
                     : flexRender(
