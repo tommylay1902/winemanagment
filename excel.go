@@ -120,7 +120,6 @@ func createWineDataWithLocation(rows [][]string) []Wine {
 					field.SetString(cellValue)
 				}
 			}
-
 		}
 		currWine.Id = uuid.New().String()
 		currWine.Location = &currLocation

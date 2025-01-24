@@ -17,6 +17,7 @@ import {
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -61,7 +62,7 @@ function App() {
   });
 
   return (
-    <div className="p-2 mt-10">
+    <div className=" mt-10">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -73,7 +74,7 @@ function App() {
                     const handler = header.column.getToggleSortingHandler();
                     if (handler) handler(e);
                   }}
-                  className=" hover:cursor-pointer hover:font-bold"
+                  className=" hover:cursor-pointer hover:font-bold  p-4"
                 >
                   {header.isPlaceholder
                     ? null
@@ -93,13 +94,13 @@ function App() {
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className={"p-11"}>
+            <TableRow key={row.id} className={""}>
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id}>
+                <TableCell key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
+                </TableCell>
               ))}
-            </tr>
+            </TableRow>
           ))}
         </TableBody>
       </Table>
