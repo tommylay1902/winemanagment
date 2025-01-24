@@ -107,7 +107,7 @@ export const generateHeaders = (sorting: SortingState) => {
       id: "Name",
       cell: (info) =>
         info.getValue() == null ? "No Location Specified" : info.getValue(),
-      header: () => <span>Row</span>,
+      header: () => <span>Storage</span>,
     }),
     columnHelper.accessor((row) => row.Location?.Row, {
       id: "Row",
