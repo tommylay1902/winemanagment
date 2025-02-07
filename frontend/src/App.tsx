@@ -1,6 +1,6 @@
 import { InputHTMLAttributes, useEffect, useState } from "react";
 
-import { GetWines } from "../wailsjs/go/main/App.js";
+import { GetWines, ImportFileFromJstoGo } from "../wailsjs/go/main/App.js";
 import { Wine } from "./shared/types/Wine.js";
 import {
   Column,
@@ -23,6 +23,11 @@ import {
   TableRow,
 } from "./components/ui/table.js";
 import { generateHeaders } from "./shared/util/GenerateWineTableHeaders.js";
+import { Input } from "./components/ui/input.js";
+import { Label } from "./components/ui/label.js";
+import { Button } from "./components/ui/button.js";
+
+// import { Button } from "./components/ui/button.js";
 declare module "@tanstack/react-table" {
   //allows us to define custom properties for our columns
   interface ColumnMeta<TData extends RowData, TValue> {
@@ -34,12 +39,49 @@ function App() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filtering, setFiltering] = useState<ColumnFiltersState>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     GetWines().then((data) => {
       setWines(data);
     });
   }, []);
+
+  const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Update the state
+    if (event.target.files != null) {
+      setSelectedFile(event.target.files[0]);
+    }
+  };
+
+  const onFileUpload = () => {
+    console.log("hello???");
+
+    if (selectedFile == null) {
+      return;
+    }
+
+    // Create an object of formData
+    console.log("HELLOO");
+    console.log(selectedFile);
+
+    selectedFile
+      .arrayBuffer()
+      .then((ab: ArrayBuffer) => {
+        // Convert ArrayBuffer to base64 string
+        const u = new Uint8Array(ab);
+        const base64 = btoa(String.fromCharCode(...u)); // Convert to base64
+
+        // Send the base64 string to the Go backend
+        ImportFileFromJstoGo(base64);
+      })
+      .catch((error) => {
+        console.error("Error processing file:", error);
+      });
+
+    // Request made to the backend api
+    // Send formData object
+  };
 
   const columns = generateHeaders(sorting);
 
@@ -63,6 +105,30 @@ function App() {
 
   return (
     <div className=" mt-10">
+      <div className="flex  flex-row gap-2 pl-3">
+        <div>
+          <Label htmlFor="import" className="whitespace-nowrap  max-w-xs">
+            Import Excel
+          </Label>
+          <Input
+            id="import"
+            type="file"
+            className="border rounded p-2  max-w-sm"
+            onChange={onFileChange}
+          />
+        </div>
+        <div>
+          <Button
+            className={`h-[40px] flex items-center justify-center  max-w-xs mt-5 ${
+              selectedFile == null ? "hidden" : ""
+            }`}
+            onClick={onFileUpload}
+          >
+            Upload
+          </Button>
+        </div>
+      </div>
+
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -70,10 +136,6 @@ function App() {
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  onClick={(e) => {
-                    const handler = header.column.getToggleSortingHandler();
-                    if (handler) handler(e);
-                  }}
                   className=" hover:cursor-pointer hover:font-bold  p-4"
                 >
                   {header.isPlaceholder
@@ -94,7 +156,10 @@ function App() {
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.map((row) => (
-            <TableRow key={row.id} className={""}>
+            <TableRow
+              key={row.id}
+              className={row.getIsSelected() ? " bg-slate-400" : ""}
+            >
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}

@@ -31,37 +31,100 @@ export const generateHeaders = (sorting: SortingState) => {
 
     columnHelper.accessor("Varietal", {
       cell: (info) => info.getValue(),
-      header: "Varietal",
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Varietal
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Winery, {
       id: "Winery",
       cell: (info) => info.getValue(),
-      header: () => <span>Winery</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Winery
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Description, {
       id: "Description",
       cell: (info) => info.getValue(),
-      header: () => <span>Description</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Description
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Type, {
       id: "Type",
       cell: (info) => info.getValue(),
-      header: () => <span>Type</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Type
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Year, {
       id: "Year",
       cell: (info) => info.getValue(),
-      header: () => <span>Year</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Year
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Aging, {
       id: "Aging",
       cell: (info) => (info.getValue() ? "Yes" : "No"),
-      header: () => <span>Aging</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Aging
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.DrinkBy, {
       id: "Drink By",
       cell: (info) => stringToUSDate(info.getValue() ? info.getValue() : ""),
-      header: () => <span>Drink By</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Drink By
+        </span>
+      ),
       sortingFn: (a, b, columnId) => {
         const notValidCompareA = !a.original.DrinkBy;
         const notValidCompareB = !b.original.DrinkBy;
@@ -86,28 +149,73 @@ export const generateHeaders = (sorting: SortingState) => {
     columnHelper.accessor((row) => row.Price, {
       id: "Price",
       cell: (info) => info.getValue(),
-      header: () => <span>Price</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Price
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Premium, {
       id: "Premium",
       cell: (info) => (info.getValue() ? "Yes" : "No"),
-      header: () => <span>Premium</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Premium
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.SpecialOccasion, {
       id: "Special Occasion",
       cell: (info) => (info.getValue() ? "Yes" : "No"),
-      header: () => <span>Special Occasion</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Special Occasion
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Notes, {
       id: "Notes",
       cell: (info) => info.getValue(),
-      header: () => <span>Notes</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Notes
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Location?.Name, {
       id: "Name",
       cell: (info) =>
         info.getValue() == null ? "No Location Specified" : info.getValue(),
-      header: () => <span>Storage</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Storage
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Location?.Row, {
       id: "Row",
@@ -115,7 +223,16 @@ export const generateHeaders = (sorting: SortingState) => {
         info.getValue() == null || info.getValue() === ""
           ? "No Row Specified"
           : info.getValue(),
-      header: () => <span>Row</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Row
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Location?.Bin, {
       id: "Bin",
@@ -123,7 +240,16 @@ export const generateHeaders = (sorting: SortingState) => {
         info.getValue() == null || info.getValue() === ""
           ? "No Bin Specified"
           : info.getValue(),
-      header: () => <span>Bin</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Bin
+        </span>
+      ),
     }),
     columnHelper.accessor((row) => row.Location?.Code, {
       id: "Code",
@@ -131,7 +257,16 @@ export const generateHeaders = (sorting: SortingState) => {
         info.getValue() == null || info.getValue() === ""
           ? "No Code Specified"
           : info.getValue(),
-      header: () => <span>Code</span>,
+      header: ({ header }) => (
+        <span
+          onClick={(e) => {
+            const handler = header.column.getToggleSortingHandler();
+            if (handler) handler(e);
+          }}
+        >
+          Code
+        </span>
+      ),
     }),
   ];
   return columns;

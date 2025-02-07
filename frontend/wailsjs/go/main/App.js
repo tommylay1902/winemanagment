@@ -6,6 +6,10 @@ export function GetWines() {
   return window['go']['main']['App']['GetWines']();
 }
 
-export function Greet(arg1) {
-  return window['go']['main']['App']['Greet'](arg1);
+export function ImportFileFromJstoGo(arg1) {
+  return window['go']['main']['App']['ImportFileFromJstoGo'](arg1);
+}
+
+export function SelectFile() {
+  return window['go']['main']['App']['SelectFile']();
 }

@@ -4,4 +4,6 @@ import {main} from '../models';
 
 export function GetWines():Promise<Array<main.Wine>>;
 
-export function Greet(arg1:string):Promise<string>;
+export function ImportFileFromJstoGo(arg1:string):Promise<void>;
+
+export function SelectFile():Promise<string>;

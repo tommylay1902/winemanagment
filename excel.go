@@ -12,8 +12,8 @@ import (
 )
 
 // columns hardcoded as in the order of them matter, find dynamic way in the future
-func LoadInitialExcelFile() []Wine {
-	data, err := excelize.OpenFile("./Wine Inventory-1-4.xlsx")
+func ImportExcelData() []Wine {
+	data, err := excelize.OpenFile("./storage.csv")
 
 	if err != nil {
 		fmt.Println(err)
@@ -127,4 +127,8 @@ func createWineDataWithLocation(rows [][]string) []Wine {
 	}
 
 	return wines
+}
+
+func LoadInitialExcelFile() []Wine {
+	return []Wine{}
 }
