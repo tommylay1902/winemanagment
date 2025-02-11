@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	"github.com/xuri/excelize/v2"
 )
 
 // App struct
@@ -31,7 +29,6 @@ func (a *App) startup(ctx context.Context) {
 // domReady is called after front-end resources have been loaded
 func (a App) domReady(ctx context.Context) {
 	// Add your action here
-
 }
 
 // beforeClose is called when the application is about to quit,
@@ -47,7 +44,9 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 func (a *App) GetWines() []Wine {
-	return LoadInitialExcelFile()
+	wines, _ := createWineDataWithLocationFromCSV("./storage.csv")
+
+	return wines
 }
 
 func (a *App) SelectFile() string {
@@ -57,16 +56,6 @@ func (a *App) SelectFile() string {
 	}
 	return file
 }
-
-// func (a *App) ImportFileFromJstoGo(blob string) {
-
-// 	file := []byte{}
-
-// 	if err := json.Unmarshal([]byte(file), &blob); err != nil {
-// 		fmt.Println(err)
-// 	}
-
-// }
 
 func (a *App) ImportFileFromJstoGo(blob string) {
 	// Decode the base64 string to byte slice
@@ -85,27 +74,5 @@ func (a *App) ImportFileFromJstoGo(blob string) {
 	}
 	defer os.Remove(tempFilePath) // Clean up the temp file after processing
 
-	// Open the Excel file using excelize
-	f, err := excelize.OpenFile(tempFilePath)
-	if err != nil {
-		log.Fatal("Error opening Excel file:", err)
-	}
-
-	// Get the sheet names (optional)
-	sheetNames := f.GetSheetList()
-	fmt.Println("Sheet Names:", sheetNames)
-
-	// Read data from the first sheet (or any other sheet)
-
-	rows, err := f.GetRows("Wine Inventory")
-	if err != nil {
-		log.Fatal("Error reading rows:", err)
-	}
-
-	// Process rows (just printing for now)
-	for _, row := range rows {
-		fmt.Println(row) // Each row is a slice of strings (cell values)
-	}
-
-	// You can now process the data as needed, e.g., extract specific cells or process data
+	ConvertExcelImportToStorage(tempFilePath)
 }

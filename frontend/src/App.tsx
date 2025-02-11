@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, useEffect, useState } from "react";
+import { InputHTMLAttributes, useEffect, useRef, useState } from "react";
 
 import { GetWines, ImportFileFromJstoGo } from "../wailsjs/go/main/App.js";
 import { Wine } from "./shared/types/Wine.js";
@@ -26,6 +26,7 @@ import { generateHeaders } from "./shared/util/GenerateWineTableHeaders.js";
 import { Input } from "./components/ui/input.js";
 import { Label } from "./components/ui/label.js";
 import { Button } from "./components/ui/button.js";
+import { useToast } from "./hooks/use-toast.js";
 
 // import { Button } from "./components/ui/button.js";
 declare module "@tanstack/react-table" {
@@ -47,6 +48,9 @@ function App() {
     });
   }, []);
 
+  const { toast } = useToast();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     // Update the state
     if (event.target.files != null) {
@@ -54,33 +58,31 @@ function App() {
     }
   };
 
-  const onFileUpload = () => {
-    console.log("hello???");
-
+  const onFileUpload = async () => {
     if (selectedFile == null) {
+      console.log("exit");
       return;
     }
 
     // Create an object of formData
-    console.log("HELLOO");
-    console.log(selectedFile);
 
-    selectedFile
-      .arrayBuffer()
-      .then((ab: ArrayBuffer) => {
-        // Convert ArrayBuffer to base64 string
-        const u = new Uint8Array(ab);
-        const base64 = btoa(String.fromCharCode(...u)); // Convert to base64
+    const ab: ArrayBuffer = await selectedFile.arrayBuffer();
+    const u = new Uint8Array(ab);
+    const base64 = btoa(String.fromCharCode(...u)); // Convert to base64
 
-        // Send the base64 string to the Go backend
-        ImportFileFromJstoGo(base64);
-      })
-      .catch((error) => {
-        console.error("Error processing file:", error);
-      });
+    // Send the base64 string to the Go backend
+    await ImportFileFromJstoGo(base64);
 
-    // Request made to the backend api
-    // Send formData object
+    //refresh data
+    const data = await GetWines();
+    setWines(data);
+    setSelectedFile(null);
+    if (fileInputRef.current != null) fileInputRef.current.value = "";
+
+    toast({
+      title: "Success!",
+      description: `Successfully imported data with ${wines.length} rows`,
+    });
   };
 
   const columns = generateHeaders(sorting);
@@ -105,27 +107,30 @@ function App() {
 
   return (
     <div className=" mt-10">
-      <div className="flex  flex-row gap-2 pl-3">
-        <div>
-          <Label htmlFor="import" className="whitespace-nowrap  max-w-xs">
-            Import Excel
-          </Label>
-          <Input
-            id="import"
-            type="file"
-            className="border rounded p-2  max-w-sm"
-            onChange={onFileChange}
-          />
-        </div>
-        <div>
-          <Button
-            className={`h-[40px] flex items-center justify-center  max-w-xs mt-5 ${
-              selectedFile == null ? "hidden" : ""
-            }`}
-            onClick={onFileUpload}
-          >
-            Upload
-          </Button>
+      <div className="flex justify-center items-center">
+        <div className="flex flex-row gap-2 pl-3 items-center">
+          <div className="flex flex-col items-center">
+            <Label htmlFor="import" className="whitespace-nowrap max-w-xs">
+              Import Excel
+            </Label>
+            <Input
+              id="import"
+              type="file"
+              ref={fileInputRef}
+              className="border rounded max-w-sm"
+              onChange={onFileChange}
+            />
+          </div>
+          <div>
+            <Button
+              className={`h-[40px] flex items-center justify-center max-w-xs mt-3 ${
+                selectedFile == null ? "hidden" : ""
+              }`}
+              onClick={onFileUpload}
+            >
+              Upload
+            </Button>
+          </div>
         </div>
       </div>
 
