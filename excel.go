@@ -214,9 +214,12 @@ func createWineDataWithLocationFromCSV(csvFilePath string) ([]Wine, error) {
 							}
 							field.SetInt(int64(i))
 						}
-					case reflect.Float64:
+					case reflect.Float32:
 						if cellValue != "" {
-							f, err := strconv.ParseFloat(strings.TrimPrefix(cellValue, "$"), 64)
+							cleaned := strings.TrimSpace(cellValue)
+							cleaned = strings.TrimPrefix(cleaned, "$")
+							cleaned = strings.ReplaceAll(cleaned, ",", "")
+							f, err := strconv.ParseFloat(cleaned, 64)
 							if err != nil {
 								fmt.Println("Error parsing float:", err)
 								return nil, err
@@ -262,7 +265,7 @@ func LoadInitialExcelFile() []Wine {
 	return []Wine{}
 }
 
-func ConvertExcelImportToStorage(tempFilePath string) {
+func ConvertExcelImportToStorage(tempFilePath string, storagePath string) {
 	// Open the Excel file using excelize
 	f, err := excelize.OpenFile(tempFilePath)
 	if err != nil {
@@ -272,15 +275,11 @@ func ConvertExcelImportToStorage(tempFilePath string) {
 	// Get the sheet names (optional)
 	sheetName := "Wine Inventory"
 	//CATCH ERR LATER
-	rows, err := f.GetRows(sheetName)
-
-	if err != nil {
-		log.Fatal("Error reading sheet", err)
-	}
+	rows, _ := f.GetRows(sheetName)
 
 	// Open a CSV file to write
-	csvFilePath := "./storage.csv"
-	csvFile, err := os.Create(csvFilePath)
+	// csvFilePath := "./resources/storage.csv"
+	csvFile, err := os.Create(storagePath)
 	if err != nil {
 		log.Fatal("Error creating CSV file:", err)
 	}

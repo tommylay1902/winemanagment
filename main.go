@@ -15,8 +15,8 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-//go:embed build/appicon.png
-var icon []byte
+//go:embed frontend/src/assets/icons/appicon.png
+var appIcon []byte
 
 func main() {
 	// Create an instance of the app structure
@@ -76,7 +76,7 @@ func main() {
 			About: &mac.AboutInfo{
 				Title:   "winemanagment",
 				Message: "",
-				Icon:    icon,
+				Icon:    appIcon,
 			},
 		},
 	})

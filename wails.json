@@ -6,6 +6,12 @@
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
+  "assetdir": "frontend/src/assets",
+  "build": {
+        "assets": ["initial_data/storage.csv"], 
+        "outputFilename": "wine-manager",
+        "icon": "icons/appicon.png"
+    },
   "author": {
     "name": "tommylay1902",
     "email": "tommylay.c@gmail.com"

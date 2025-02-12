@@ -13,6 +13,7 @@ import {
   RowSelectionState,
   SortingState,
   useReactTable,
+  VisibilityState,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -27,6 +28,13 @@ import { Input } from "./components/ui/input.js";
 import { Label } from "./components/ui/label.js";
 import { Button } from "./components/ui/button.js";
 import { useToast } from "./hooks/use-toast.js";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu.js";
+import { ChevronDown } from "lucide-react";
 
 // import { Button } from "./components/ui/button.js";
 declare module "@tanstack/react-table" {
@@ -41,6 +49,21 @@ function App() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filtering, setFiltering] = useState<ColumnFiltersState>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    Type: false,
+    Year: false,
+    Aging: false,
+    Description: false,
+    Notes: false,
+    Name: false,
+    Price: false,
+    Premium: false,
+    "Special Occasion": false,
+    "Drink By": false,
+    Row: false,
+    Bin: false,
+    Code: false,
+  });
 
   useEffect(() => {
     GetWines().then((data) => {
@@ -81,7 +104,7 @@ function App() {
 
     toast({
       title: "Success!",
-      description: `Successfully imported data with ${wines.length} rows`,
+      description: `Successfully imported data with ${data.length} rows`,
     });
   };
 
@@ -100,7 +123,9 @@ function App() {
       columnFilters: filtering,
       sorting,
       rowSelection,
+      columnVisibility,
     },
+    onColumnVisibilityChange: setColumnVisibility,
     onSortingChange: setSorting,
     getRowId: (row) => row.Id,
   });
@@ -131,6 +156,42 @@ function App() {
               Upload
             </Button>
           </div>
+        </div>
+      </div>
+
+      <div className="flex justify-start w-full pl-4">
+        <div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="ml-auto">
+                Columns <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {table
+                .getAllColumns()
+                .filter(
+                  (column) => column.getCanHide() && column.id !== "select-col"
+                )
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => {
+                      //reset the filter value
+                      if (!value) {
+                        column.setFilterValue("");
+                      }
+                      column.toggleVisibility(!!value);
+                    }}
+                    onSelect={(e) => e.preventDefault()} // Prevent menu close on select
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -174,6 +235,12 @@ function App() {
           ))}
         </TableBody>
       </Table>
+      <div className="fixed bottom-0 left-0 w-full bg-white shadow-md p-4 flex items-center justify-end space-x-2">
+        <div className="flex-1 text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredRowModel().rows.length} row(s) selected.
+        </div>
+      </div>
     </div>
   );
 }
