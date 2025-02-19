@@ -290,7 +290,10 @@ func ConvertExcelImportToStorage(tempFilePath string, storagePath string) {
 	defer writer.Flush()
 
 	// Write each row from Excel to CSV
-	for _, row := range rows {
+	for i, row := range rows {
+		if i == 0 {
+			continue
+		}
 		if err := writer.Write(row); err != nil {
 			log.Fatal("Error writing to CSV:", err)
 		}

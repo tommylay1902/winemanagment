@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -96,16 +99,26 @@ func (a *App) ImportFileFromJstoGo(blob string) {
 	ConvertExcelImportToStorage(tempFilePath, storagePath)
 }
 
-// func (a *App) SaveData(data string) error {
-// 	path, _ := GetStoragePath()
-// 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer file.Close()
-// 	_, err = file.WriteString(data + "\n")
-// 	return err
-// }
+func (a *App) AddWine(data string) error {
+	// fmt.Println(data)
+	wine := Wine{}
+	json.Unmarshal([]byte(data), &wine)
+	fmt.Println("printing", wine)
+	path, _ := GetStoragePath()
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+	wineArr := strings.Split(wine.String(), ",")
+
+	err = writer.Write(wineArr)
+
+	return err
+
+}
 
 func GetStoragePath() (string, error) {
 	// Option 1: Store next to the executable (may require write permissions)
@@ -119,7 +132,6 @@ func GetStoragePath() (string, error) {
 	// Option 2: Use user-specific storage (recommended for writable files)
 	// usr, _ := user.Current()
 	// storagePath = filepath.Join(usr.HomeDir, ".yourapp", "storage.csv")
-
 	return storagePath, nil
 }
 

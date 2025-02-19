@@ -1,6 +1,11 @@
+"use client";
 import { InputHTMLAttributes, useEffect, useRef, useState } from "react";
 
-import { GetWines, ImportFileFromJstoGo } from "../wailsjs/go/main/App.js";
+import {
+  AddWine,
+  GetWines,
+  ImportFileFromJstoGo,
+} from "../wailsjs/go/main/App.js";
 import { Wine } from "./shared/types/Wine.js";
 import {
   Column,
@@ -35,6 +40,31 @@ import {
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu.js";
 import { ChevronDown } from "lucide-react";
+import { main } from "wailsjs/go/models.js";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./components/ui/dialog.js";
+
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "./components/ui/form.js";
+import { formConfig } from "./shared/form/wineForm.js";
+import { Checkbox } from "./components/ui/checkbox.js";
+import { getInputValue } from "./shared/util/formUtils.js";
 
 // import { Button } from "./components/ui/button.js";
 declare module "@tanstack/react-table" {
@@ -44,7 +74,7 @@ declare module "@tanstack/react-table" {
   }
 }
 function App() {
-  const [wines, setWines] = useState<Wine[]>([]);
+  const [wines, setWines] = useState<main.Wine[]>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filtering, setFiltering] = useState<ColumnFiltersState>([]);
@@ -108,6 +138,29 @@ function App() {
     });
   };
 
+  const addWine = async (wine: Wine) => {
+    console.log(wine);
+    await AddWine(JSON.stringify(wine));
+    GetWines().then((data) => setWines(data));
+  };
+
+  const form = useForm<Wine>({
+    defaultValues: {
+      Id: "",
+      Winery: "",
+      Varietal: "",
+      Description: "",
+      Type: "Red",
+      Year: new Date().getFullYear(),
+      Aging: false,
+      Price: 0,
+      Premium: false,
+      SpecialOccasion: false,
+      Notes: "Default notes",
+      // Add other default values
+    },
+  });
+
   const columns = generateHeaders(sorting);
 
   const table = useReactTable({
@@ -129,6 +182,10 @@ function App() {
     onSortingChange: setSorting,
     getRowId: (row) => row.Id,
   });
+
+  const [dateInputStates, setDateInputStates] = useState<
+    Record<string, boolean>
+  >({});
 
   return (
     <div className=" mt-10">
@@ -157,6 +214,158 @@ function App() {
             </Button>
           </div>
         </div>
+      </div>
+      <div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline">Add Wine+</Button>
+          </DialogTrigger>
+          <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add Wine</DialogTitle>
+              <DialogDescription>Add Your Wine Here</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(addWine)}
+                  className="space-y-4"
+                >
+                  <div className="flex flex-row items-center justify-between">
+                    {formConfig
+                      .filter((field) => field.type === "checkbox")
+                      .map((field) => (
+                        <FormField
+                          key={field.name}
+                          control={form.control}
+                          name={field.name}
+                          render={({ field: formField }) => (
+                            <FormItem>
+                              <FormControl className="pb-[.25vh]">
+                                <Checkbox
+                                  checked={!!formField.value}
+                                  onCheckedChange={(checked) => {
+                                    const value =
+                                      checked === "indeterminate"
+                                        ? false
+                                        : checked;
+                                    formField.onChange(value);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="!m-0">
+                                {field.label}
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                  </div>
+                  {formConfig
+                    .filter((field) => field.type !== "checkbox")
+                    .map((field) => (
+                      <FormField
+                        key={field.name}
+                        control={form.control}
+                        name={field.name}
+                        render={({ field: formField }) => (
+                          <FormItem>
+                            {field.type === "date" ? (
+                              <div className="flex flex-col space-y-2">
+                                <FormLabel>{field.label}</FormLabel>
+                                <div className="relative">
+                                  <Input
+                                    {...formField}
+                                    type="date"
+                                    value={(formField.value as string) ?? ""}
+                                    onFocus={() =>
+                                      setDateInputStates((prev) => ({
+                                        ...prev,
+                                        [field.name]: true,
+                                      }))
+                                    }
+                                    onBlur={() =>
+                                      setDateInputStates((prev) => ({
+                                        ...prev,
+                                        [field.name]: false,
+                                      }))
+                                    }
+                                  />
+                                  {(formField.value ||
+                                    dateInputStates[field.name]) && (
+                                    <button
+                                      type="button"
+                                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                      onClick={() =>
+                                        form.setValue(field.name, null)
+                                      }
+                                      aria-label="Clear date"
+                                      tabIndex={-1}
+                                    >
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-4 w-4"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M6 18L18 6M6 6l12 12"
+                                        />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <FormLabel>{field.label}</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...formField}
+                                    placeholder={field.placeholder}
+                                    type={field.type}
+                                    value={getInputValue(
+                                      formField.value,
+                                      field.type
+                                    )}
+                                    onChange={(e) => {
+                                      if (field.type === "number") {
+                                        const value = Number(e.target.value);
+                                        formField.onChange(
+                                          isNaN(value) ? 0 : value
+                                        );
+                                      } else {
+                                        formField.onChange(e.target.value);
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                              </>
+                            )}
+                            {/* {field.description && (
+                            <FormDescription>
+                              {field.description}
+                            </FormDescription>
+                          )}
+                          <FormMessage /> */}
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="submit">Add Wine</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="flex justify-start w-full pl-4">
