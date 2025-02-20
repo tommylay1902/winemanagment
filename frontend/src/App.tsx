@@ -187,7 +187,17 @@ function App() {
   const table = useReactTable({
     data: wines,
     columns,
-    filterFns: {},
+    filterFns: {
+      numericRange: (row, columnId, filterValue) => {
+        const value = row.getValue(columnId) as number;
+        const [min, max] = filterValue || [null, null];
+
+        if (min !== null && max !== null) return value >= min && value <= max;
+        if (min !== null) return value >= min;
+        if (max !== null) return value <= max;
+        return true;
+      },
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -537,7 +547,7 @@ function App() {
 
 function Filter({ column }: { column: Column<any, unknown> }) {
   const columnFilterValue = column.getFilterValue();
-  const { filterVariant, isBoolean } = column.columnDef.meta ?? {};
+  const { filterVariant, isBoolean, isNumeric } = column.columnDef.meta ?? {};
 
   return filterVariant === "range" ? (
     <div>
@@ -546,20 +556,30 @@ function Filter({ column }: { column: Column<any, unknown> }) {
         <DebouncedInput
           type="number"
           value={(columnFilterValue as [number, number])?.[0] ?? ""}
-          onChange={(value) =>
-            column.setFilterValue((old: [number, number]) => [value, old?.[1]])
-          }
-          placeholder={`Min`}
+          onChange={(value) => {
+            const current = (columnFilterValue || []) as [number, number];
+            column.setFilterValue([
+              value ? Number(value) : undefined,
+              current[1],
+            ]);
+          }}
+          placeholder={`Min ${isNumeric ? "(USD)" : ""}`}
           className="w-24 border shadow rounded"
+          step={isNumeric ? "0.01" : "1"}
         />
         <DebouncedInput
           type="number"
           value={(columnFilterValue as [number, number])?.[1] ?? ""}
-          onChange={(value) =>
-            column.setFilterValue((old: [number, number]) => [old?.[0], value])
-          }
-          placeholder={`Max`}
+          onChange={(value) => {
+            const current = (columnFilterValue || []) as [number, number];
+            column.setFilterValue([
+              current[0],
+              value ? Number(value) : undefined,
+            ]);
+          }}
+          placeholder={`Max ${isNumeric ? "(USD)" : ""}`}
           className="w-24 border shadow rounded"
+          step={isNumeric ? "0.01" : "1"}
         />
       </div>
       <div className="h-1" />

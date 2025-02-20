@@ -13,6 +13,7 @@ declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
     filterVariant?: "text" | "range" | "select";
     isBoolean?: boolean; // Add this line
+    isNumeric?: boolean;
   }
 }
 export const generateHeaders = (sorting: SortingState) => {
@@ -113,6 +114,10 @@ export const generateHeaders = (sorting: SortingState) => {
       header: ({ header }) => (
         <SortHeader<Wine> header={header} title="Price" />
       ),
+      meta: {
+        filterVariant: "range",
+        isNumeric: true,
+      },
     }),
     columnHelper.accessor((row) => row.Premium, {
       id: "Premium",
