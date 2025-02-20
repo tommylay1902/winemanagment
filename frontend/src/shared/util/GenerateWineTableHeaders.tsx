@@ -1,11 +1,20 @@
-import { createColumnHelper, SortingState } from "@tanstack/react-table";
+import {
+  createColumnHelper,
+  RowData,
+  SortingState,
+} from "@tanstack/react-table";
 import { Wine } from "../types/Wine";
 import { Checkbox } from "@/components/ui/checkbox";
 import { stringToJSDate, stringToUSDate } from "./Date";
 import { SortHeader } from "@/components/SortHeader";
 
 const columnHelper = createColumnHelper<Wine>();
-
+declare module "@tanstack/react-table" {
+  interface ColumnMeta<TData extends RowData, TValue> {
+    filterVariant?: "text" | "range" | "select";
+    isBoolean?: boolean; // Add this line
+  }
+}
 export const generateHeaders = (sorting: SortingState) => {
   const columns = [
     columnHelper.display({
@@ -66,6 +75,10 @@ export const generateHeaders = (sorting: SortingState) => {
       header: ({ header }) => (
         <SortHeader<Wine> header={header} title="Aging" />
       ),
+      meta: {
+        filterVariant: "select",
+        isBoolean: true, // Add this custom meta flag
+      },
     }),
     columnHelper.accessor((row) => row.DrinkBy, {
       id: "Drink By",
@@ -114,6 +127,10 @@ export const generateHeaders = (sorting: SortingState) => {
           Premium
         </span>
       ),
+      meta: {
+        filterVariant: "select",
+        isBoolean: true, // Add this custom meta flag
+      },
     }),
     columnHelper.accessor((row) => row.SpecialOccasion, {
       id: "Special Occasion",
@@ -128,6 +145,10 @@ export const generateHeaders = (sorting: SortingState) => {
           Special Occasion
         </span>
       ),
+      meta: {
+        filterVariant: "select",
+        isBoolean: true, // Add this custom meta flag
+      },
     }),
     columnHelper.accessor((row) => row.Notes, {
       id: "Notes",

@@ -24,7 +24,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:     "winemanagment",
+		Title:     "Wine Inventory",
 		Width:     1024,
 		Height:    768,
 		MinWidth:  1024,
@@ -63,7 +63,7 @@ func main() {
 		// Mac platform specific options
 		Mac: &mac.Options{
 			TitleBar: &mac.TitleBar{
-				TitlebarAppearsTransparent: true,
+				TitlebarAppearsTransparent: false,
 				HideTitle:                  false,
 				HideTitleBar:               false,
 				FullSizeContent:            false,
@@ -71,10 +71,10 @@ func main() {
 				HideToolbarSeparator:       true,
 			},
 			Appearance:           mac.NSAppearanceNameDarkAqua,
-			WebviewIsTransparent: true,
-			WindowIsTranslucent:  true,
+			WebviewIsTransparent: false,
+			WindowIsTranslucent:  false,
 			About: &mac.AboutInfo{
-				Title:   "winemanagment",
+				Title:   "Wine Inventory",
 				Message: "",
 				Icon:    appIcon,
 			},
