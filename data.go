@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type Wine struct {
-	Id              string     `json:"Id"`
+	Id              int        `json:"Id"`
 	Winery          string     `json:"Winery"`
 	Varietal        string     `json:"Varietal"`
 	Description     string     `json:"Description"`
@@ -23,7 +24,8 @@ type Wine struct {
 }
 
 func (w *Wine) String() string {
-	fields := make([]string, 15) // Explicit 15 columns
+	fields := make([]string, 16) // Explicit 16 columns
+	fields[0] = strconv.Itoa(w.Id)
 
 	// Helper function for boolean conversion
 	boolToYesNo := func(b bool) string {
@@ -34,29 +36,29 @@ func (w *Wine) String() string {
 	}
 
 	// Map values to their positions
-	fields[0] = w.Winery
-	fields[1] = w.Varietal
-	fields[2] = w.Description
-	fields[3] = w.Type
-	fields[4] = fmt.Sprintf("%d", w.Year)
-	fields[5] = boolToYesNo(w.Aging)
-	fields[6] = ""
+	fields[1] = w.Winery
+	fields[2] = w.Varietal
+	fields[3] = w.Description
+	fields[4] = w.Type
+	fields[5] = fmt.Sprintf("%d", w.Year)
+	fields[6] = boolToYesNo(w.Aging)
+	fields[7] = ""
 	if w.DrinkBy != nil {
-		fields[6] = w.DrinkBy.Format("2006-01-02")
+		fields[7] = w.DrinkBy.Format("2006-01-02")
 	}
-	fields[7] = fmt.Sprintf("%.2f", w.Price)
-	fields[8] = boolToYesNo(w.Premium)
-	fields[9] = boolToYesNo(w.SpecialOccasion)
-	fields[10] = w.Notes
-	fields[11] = ""
+	fields[8] = fmt.Sprintf("%.2f", w.Price)
+	fields[9] = boolToYesNo(w.Premium)
+	fields[10] = boolToYesNo(w.SpecialOccasion)
+	fields[11] = w.Notes
 	fields[12] = ""
 	fields[13] = ""
 	fields[14] = ""
+	fields[15] = ""
 	if w.Location != nil {
-		fields[11] = w.Location.Name
-		fields[12] = w.Location.Row
-		fields[13] = w.Location.Bin
-		fields[14] = w.Location.Code
+		fields[12] = w.Location.Name
+		fields[13] = w.Location.Row
+		fields[14] = w.Location.Bin
+		fields[15] = w.Location.Code
 	}
 
 	return strings.Join(fields, ",")

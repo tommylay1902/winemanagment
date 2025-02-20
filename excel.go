@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -123,7 +122,7 @@ func createWineDataWithLocation(rows [][]string) []Wine {
 				}
 			}
 		}
-		currWine.Id = uuid.New().String()
+		currWine.Id = i
 		currWine.Location = &currLocation
 		wines = append(wines, currWine)
 	}
@@ -157,24 +156,25 @@ func createWineDataWithLocationFromCSV(csvFilePath string) ([]Wine, error) {
 
 	// Column index mappings
 	wineKeyLookup := map[int]string{
-		0:  "Winery",
-		1:  "Varietal",
-		2:  "Description",
-		3:  "Type",
-		4:  "Year",
-		5:  "Aging",
-		6:  "DrinkBy",
-		7:  "Price",
-		8:  "Premium",
-		9:  "SpecialOccasion",
-		10: "Notes",
+		0:  "Id",
+		1:  "Winery",
+		2:  "Varietal",
+		3:  "Description",
+		4:  "Type",
+		5:  "Year",
+		6:  "Aging",
+		7:  "DrinkBy",
+		8:  "Price",
+		9:  "Premium",
+		10: "SpecialOccasion",
+		11: "Notes",
 	}
 
 	locationKeyLookup := map[int]string{
-		11: "Name",
-		12: "Row",
-		13: "Bin",
-		14: "Code",
+		12: "Name",
+		13: "Row",
+		14: "Bin",
+		15: "Code",
 	}
 
 	// Iterate over the rows (skip header)
@@ -253,7 +253,6 @@ func createWineDataWithLocationFromCSV(csvFilePath string) ([]Wine, error) {
 		}
 
 		// Assign a unique ID to the wine entry
-		currWine.Id = uuid.New().String()
 		currWine.Location = &currLocation
 		wines = append(wines, currWine)
 	}
@@ -294,6 +293,9 @@ func ConvertExcelImportToStorage(tempFilePath string, storagePath string) {
 		if i == 0 {
 			continue
 		}
+
+		//research more efficient method down the road
+		row := append([]string{strconv.Itoa(i)}, row...)
 		if err := writer.Write(row); err != nil {
 			log.Fatal("Error writing to CSV:", err)
 		}

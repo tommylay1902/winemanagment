@@ -1,7 +1,7 @@
 export namespace main {
 	
 	export class Wine {
-	    Id: string;
+	    Id: number;
 	    Winery: string;
 	    Varietal: string;
 	    Description: string;

@@ -6,7 +6,7 @@ import {
   GetWines,
   ImportFileFromJstoGo,
 } from "../wailsjs/go/main/App.js";
-import { Wine } from "./shared/types/Wine.js";
+
 import {
   Column,
   ColumnFiltersState,
@@ -56,15 +56,14 @@ import { useForm } from "react-hook-form";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "./components/ui/form.js";
 import { formConfig } from "./shared/form/wineForm.js";
 import { Checkbox } from "./components/ui/checkbox.js";
 import { getInputValue } from "./shared/util/formUtils.js";
+import { stringToTimeStamp } from "./shared/util/Date.js";
 
 // import { Button } from "./components/ui/button.js";
 declare module "@tanstack/react-table" {
@@ -75,10 +74,12 @@ declare module "@tanstack/react-table" {
 }
 function App() {
   const [wines, setWines] = useState<main.Wine[]>([]);
+  const [newId, setNewId] = useState<number>(-1);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filtering, setFiltering] = useState<ColumnFiltersState>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     Type: false,
     Year: false,
@@ -94,10 +95,13 @@ function App() {
     Bin: false,
     Code: false,
   });
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     GetWines().then((data) => {
       setWines(data);
+      setNewId(data[data.length - 1].Id);
+      setIsInitialLoad(false);
     });
   }, []);
 
@@ -138,15 +142,29 @@ function App() {
     });
   };
 
-  const addWine = async (wine: Wine) => {
-    console.log(wine);
+  const addWine = async (wine: main.Wine) => {
+    wine.Id = newId + 1;
+    setNewId(newId + 1);
+    if (wine.DrinkBy) {
+      wine.DrinkBy = stringToTimeStamp(wine.DrinkBy);
+    }
     await AddWine(JSON.stringify(wine));
-    GetWines().then((data) => setWines(data));
+    setWines((prev) => [...prev, wine]);
+    toast({
+      title: "Success!",
+      description: `Successfully added ${wine.Varietal}`,
+    });
+    // GetWines().then((data) => {
+    //   setWines(data);
+    //   toast({
+    //     title: "Success!",
+    //     description: `Successfully added ${wine.Varietal}`,
+    //   });
+    // });
   };
 
-  const form = useForm<Wine>({
+  const form = useForm<main.Wine>({
     defaultValues: {
-      Id: "",
       Winery: "",
       Varietal: "",
       Description: "",
@@ -180,16 +198,18 @@ function App() {
     },
     onColumnVisibilityChange: setColumnVisibility,
     onSortingChange: setSorting,
-    getRowId: (row) => row.Id,
+    getRowId: (row) => row.Id + "",
+    autoResetPageIndex: false, // Add this line
   });
 
   const [dateInputStates, setDateInputStates] = useState<
     Record<string, boolean>
   >({});
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
   return (
     <div className=" mt-10">
-      <div className="flex justify-center items-center">
+      <div className="flex justify-center items-center sticky top-0">
         <div className="flex flex-row gap-2 pl-3 items-center">
           <div className="flex flex-col items-center">
             <Label htmlFor="import" className="whitespace-nowrap max-w-xs">
@@ -215,160 +235,8 @@ function App() {
           </div>
         </div>
       </div>
-      <div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline">Add Wine+</Button>
-          </DialogTrigger>
-          <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add Wine</DialogTitle>
-              <DialogDescription>Add Your Wine Here</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(addWine)}
-                  className="space-y-4"
-                >
-                  <div className="flex flex-row items-center justify-between">
-                    {formConfig
-                      .filter((field) => field.type === "checkbox")
-                      .map((field) => (
-                        <FormField
-                          key={field.name}
-                          control={form.control}
-                          name={field.name}
-                          render={({ field: formField }) => (
-                            <FormItem>
-                              <FormControl className="pb-[.25vh]">
-                                <Checkbox
-                                  checked={!!formField.value}
-                                  onCheckedChange={(checked) => {
-                                    const value =
-                                      checked === "indeterminate"
-                                        ? false
-                                        : checked;
-                                    formField.onChange(value);
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="!m-0">
-                                {field.label}
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                  </div>
-                  {formConfig
-                    .filter((field) => field.type !== "checkbox")
-                    .map((field) => (
-                      <FormField
-                        key={field.name}
-                        control={form.control}
-                        name={field.name}
-                        render={({ field: formField }) => (
-                          <FormItem>
-                            {field.type === "date" ? (
-                              <div className="flex flex-col space-y-2">
-                                <FormLabel>{field.label}</FormLabel>
-                                <div className="relative">
-                                  <Input
-                                    {...formField}
-                                    type="date"
-                                    value={(formField.value as string) ?? ""}
-                                    onFocus={() =>
-                                      setDateInputStates((prev) => ({
-                                        ...prev,
-                                        [field.name]: true,
-                                      }))
-                                    }
-                                    onBlur={() =>
-                                      setDateInputStates((prev) => ({
-                                        ...prev,
-                                        [field.name]: false,
-                                      }))
-                                    }
-                                  />
-                                  {(formField.value ||
-                                    dateInputStates[field.name]) && (
-                                    <button
-                                      type="button"
-                                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                      onClick={() =>
-                                        form.setValue(field.name, null)
-                                      }
-                                      aria-label="Clear date"
-                                      tabIndex={-1}
-                                    >
-                                      <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="h-4 w-4"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M6 18L18 6M6 6l12 12"
-                                        />
-                                      </svg>
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <FormLabel>{field.label}</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    {...formField}
-                                    placeholder={field.placeholder}
-                                    type={field.type}
-                                    value={getInputValue(
-                                      formField.value,
-                                      field.type
-                                    )}
-                                    onChange={(e) => {
-                                      if (field.type === "number") {
-                                        const value = Number(e.target.value);
-                                        formField.onChange(
-                                          isNaN(value) ? 0 : value
-                                        );
-                                      } else {
-                                        formField.onChange(e.target.value);
-                                      }
-                                    }}
-                                  />
-                                </FormControl>
-                              </>
-                            )}
-                            {/* {field.description && (
-                            <FormDescription>
-                              {field.description}
-                            </FormDescription>
-                          )}
-                          <FormMessage /> */}
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button type="submit">Add Wine</Button>
-                    </DialogClose>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      <div className="flex justify-start w-full pl-4">
+      <div className="flex justify-between w-full rounded-md">
         <div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -401,53 +269,244 @@ function App() {
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button
+            variant="outline"
+            onClick={() => setShowSelectedOnly(!showSelectedOnly)}
+          >
+            {showSelectedOnly ? "Show All" : "Show Selected Only"}
+          </Button>
+        </div>
+        <div className="sticky top-[76px]">
+          {Object.keys(rowSelection).length > 0 && (
+            <>
+              <Button
+                variant="ghost"
+                className="rounded-none border-b-2 border-r-2 border-primary bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0 hover:border-r-0"
+              >
+                Edit Wine
+              </Button>
+              <Button
+                variant="ghost"
+                className="rounded-none border-b-2 border-primary bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0"
+              >
+                Delete Wines
+              </Button>
+            </>
+          )}
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                className="rounded-none border-b-2 border-l-2 border-primary bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0 hover:border-l-0"
+              >
+                Add Wine+
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add Wine</DialogTitle>
+                <DialogDescription>Add Your Wine Here</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(addWine)}
+                    className="space-y-4"
+                  >
+                    <div className="flex flex-row items-center justify-between">
+                      {formConfig
+                        .filter((field) => field.type === "checkbox")
+                        .map((field) => (
+                          <FormField
+                            key={field.name}
+                            control={form.control}
+                            name={field.name}
+                            render={({ field: formField }) => (
+                              <FormItem>
+                                <FormControl className="pb-[.25vh]">
+                                  <Checkbox
+                                    checked={!!formField.value}
+                                    onCheckedChange={(checked) => {
+                                      const value =
+                                        checked === "indeterminate"
+                                          ? false
+                                          : checked;
+                                      formField.onChange(value);
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="!m-0">
+                                  {field.label}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                    </div>
+                    {formConfig
+                      .filter((field) => field.type !== "checkbox")
+                      .map((field) => (
+                        <FormField
+                          key={field.name}
+                          control={form.control}
+                          name={field.name}
+                          render={({ field: formField }) => (
+                            <FormItem>
+                              {field.type === "date" ? (
+                                <div className="flex flex-col space-y-2">
+                                  <FormLabel>{field.label}</FormLabel>
+                                  <div className="relative">
+                                    <Input
+                                      {...formField}
+                                      type="date"
+                                      value={(formField.value as string) ?? ""}
+                                      onFocus={() =>
+                                        setDateInputStates((prev) => ({
+                                          ...prev,
+                                          [field.name]: true,
+                                        }))
+                                      }
+                                      onBlur={() =>
+                                        setDateInputStates((prev) => ({
+                                          ...prev,
+                                          [field.name]: false,
+                                        }))
+                                      }
+                                    />
+                                    {(formField.value ||
+                                      dateInputStates[field.name]) && (
+                                      <button
+                                        type="button"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        onClick={() =>
+                                          form.setValue(field.name, null)
+                                        }
+                                        aria-label="Clear date"
+                                        tabIndex={-1}
+                                      >
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="h-4 w-4"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
+                                          />
+                                        </svg>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <FormLabel>{field.label}</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...formField}
+                                      placeholder={field.placeholder}
+                                      type={field.type}
+                                      value={getInputValue(
+                                        formField.value,
+                                        field.type
+                                      )}
+                                      onChange={(e) => {
+                                        if (field.type === "number") {
+                                          const value = Number(e.target.value);
+                                          formField.onChange(
+                                            isNaN(value) ? 0 : value
+                                          );
+                                        } else {
+                                          formField.onChange(e.target.value);
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                </>
+                              )}
+                              {/* {field.description && (
+                            <FormDescription>
+                              {field.description}
+                            </FormDescription>
+                          )}
+                          <FormMessage /> */}
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="submit">Add Wine</Button>
+                      </DialogClose>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
+      <div className="rounded-md border max-h-[calc(100vh-200px)] overflow-auto">
+        <Table className="">
+          <TableHeader className="bg-slate-200 sticky top-0 z-100 border-t shadow-sm p-4 ">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    className="p-4 sticky top-0 text-black font-bold"
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
 
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className=" hover:cursor-pointer hover:font-bold  p-4"
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                  {header.column.getCanFilter() ? (
-                    <div>
-                      <Filter column={header.column} />
-                    </div>
-                  ) : null}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow
-              key={row.id}
-              className={row.getIsSelected() ? " bg-slate-400" : ""}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <div className="fixed bottom-0 left-0 w-full bg-white shadow-md p-4 flex items-center justify-end space-x-2">
+                    {header.column.getCanFilter() ? (
+                      <div>
+                        <Filter column={header.column} />
+                      </div>
+                    ) : null}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody className="relative">
+            {(showSelectedOnly
+              ? table.getSelectedRowModel().rows
+              : table.getRowModel().rows
+            ).map((row) => (
+              <TableRow
+                key={row.id}
+                className={row.getIsSelected() ? "bg-slate-400" : ""}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="sticky bottom-0 bg-white border-t shadow-sm p-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+          {isInitialLoad ? (
+            "Loading..."
+          ) : (
+            <>
+              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredRowModel().rows.length} row(s) selected.
+            </>
+          )}
         </div>
       </div>
     </div>

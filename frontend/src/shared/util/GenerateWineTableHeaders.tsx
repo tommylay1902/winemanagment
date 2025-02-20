@@ -2,6 +2,7 @@ import { createColumnHelper, SortingState } from "@tanstack/react-table";
 import { Wine } from "../types/Wine";
 import { Checkbox } from "@/components/ui/checkbox";
 import { stringToJSDate, stringToUSDate } from "./Date";
+import { SortHeader } from "@/components/SortHeader";
 
 const columnHelper = createColumnHelper<Wine>();
 
@@ -32,98 +33,45 @@ export const generateHeaders = (sorting: SortingState) => {
     columnHelper.accessor("Varietal", {
       cell: (info) => info.getValue(),
       header: ({ header }) => (
-        <span
-          onClick={(e) => {
-            const handler = header.column.getToggleSortingHandler();
-            if (handler) handler(e);
-          }}
-        >
-          Varietal
-        </span>
+        <SortHeader<Wine> header={header} title="Varietal" />
       ),
     }),
     columnHelper.accessor((row) => row.Winery, {
       id: "Winery",
       cell: (info) => info.getValue(),
       header: ({ header }) => (
-        <span
-          onClick={(e) => {
-            const handler = header.column.getToggleSortingHandler();
-            if (handler) handler(e);
-          }}
-        >
-          Winery
-        </span>
+        <SortHeader<Wine> header={header} title="Winery" />
       ),
     }),
     columnHelper.accessor((row) => row.Description, {
       id: "Description",
       cell: (info) => info.getValue(),
       header: ({ header }) => (
-        <span
-          onClick={(e) => {
-            const handler = header.column.getToggleSortingHandler();
-            if (handler) handler(e);
-          }}
-        >
-          Description
-        </span>
+        <SortHeader<Wine> header={header} title="Description" />
       ),
     }),
     columnHelper.accessor((row) => row.Type, {
       id: "Type",
       cell: (info) => info.getValue(),
-      header: ({ header }) => (
-        <span
-          onClick={(e) => {
-            const handler = header.column.getToggleSortingHandler();
-            if (handler) handler(e);
-          }}
-        >
-          Type
-        </span>
-      ),
+      header: ({ header }) => <SortHeader<Wine> header={header} title="Type" />,
     }),
     columnHelper.accessor((row) => row.Year, {
       id: "Year",
       cell: (info) => info.getValue(),
-      header: ({ header }) => (
-        <span
-          onClick={(e) => {
-            const handler = header.column.getToggleSortingHandler();
-            if (handler) handler(e);
-          }}
-        >
-          Year
-        </span>
-      ),
+      header: ({ header }) => <SortHeader<Wine> header={header} title="Year" />,
     }),
     columnHelper.accessor((row) => row.Aging, {
       id: "Aging",
       cell: (info) => (info.getValue() ? "Yes" : "No"),
       header: ({ header }) => (
-        <span
-          onClick={(e) => {
-            const handler = header.column.getToggleSortingHandler();
-            if (handler) handler(e);
-          }}
-        >
-          Aging
-        </span>
+        <SortHeader<Wine> header={header} title="Aging" />
       ),
     }),
     columnHelper.accessor((row) => row.DrinkBy, {
       id: "Drink By",
       cell: (info) => stringToUSDate(info.getValue() ? info.getValue() : ""),
       header: ({ header }) => (
-        <span
-          onClick={(e) => {
-            const handler = header.column.getToggleSortingHandler();
-            if (handler) handler(e);
-          }}
-        >
-          Drink By
-        </span>
+        <SortHeader<Wine> header={header} title="Drink By" />
       ),
       sortingFn: (a, b, columnId) => {
         const notValidCompareA = !a.original.DrinkBy;
@@ -150,14 +98,7 @@ export const generateHeaders = (sorting: SortingState) => {
       id: "Price",
       cell: (info) => info.getValue(),
       header: ({ header }) => (
-        <span
-          onClick={(e) => {
-            const handler = header.column.getToggleSortingHandler();
-            if (handler) handler(e);
-          }}
-        >
-          Price
-        </span>
+        <SortHeader<Wine> header={header} title="Price" />
       ),
     }),
     columnHelper.accessor((row) => row.Premium, {
