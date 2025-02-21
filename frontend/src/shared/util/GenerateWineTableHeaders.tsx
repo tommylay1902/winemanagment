@@ -9,9 +9,10 @@ import { stringToJSDate, stringToUSDate } from "./Date";
 import { SortHeader } from "@/components/SortHeader";
 
 const columnHelper = createColumnHelper<Wine>();
+
 declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
-    filterVariant?: "text" | "range" | "select";
+    filterVariant?: "text" | "range" | "select" | "range-date";
     isBoolean?: boolean; // Add this line
     isNumeric?: boolean;
   }
@@ -157,7 +158,9 @@ export const generateHeaders = (sorting: SortingState) => {
     }),
     columnHelper.accessor((row) => row.Notes, {
       id: "Notes",
-      cell: (info) => info.getValue(),
+      cell: (info) => {
+        return <span>{info.getValue()}</span>;
+      },
       header: ({ header }) => (
         <span
           onClick={(e) => {

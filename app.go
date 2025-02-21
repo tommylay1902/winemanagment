@@ -60,7 +60,15 @@ func (a *App) GetWines() []Wine {
 		fmt.Println("Error getting storage path:", err)
 		return []Wine{}
 	}
-	wines, _ := createWineDataWithLocationFromCSV(path)
+
+	wines, err := createWineDataWithLocationFromCSV(path)
+	for _, w := range wines {
+		fmt.Println(w)
+	}
+	if err != nil {
+		fmt.Println(err)
+		return []Wine{}
+	}
 
 	return wines
 }
@@ -100,10 +108,10 @@ func (a *App) ImportFileFromJstoGo(blob string) {
 }
 
 func (a *App) AddWine(data string) error {
-	// fmt.Println(data)
+
 	wine := Wine{}
 	json.Unmarshal([]byte(data), &wine)
-	fmt.Println("printing", wine)
+	fmt.Println("Adding WINE", wine)
 	path, _ := GetStoragePath()
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

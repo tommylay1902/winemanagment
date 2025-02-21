@@ -2,7 +2,7 @@ export const stringToTimeStamp = (date: string | null | undefined) => {
   if (date == null || date == "" || date == undefined) {
     return null;
   }
-
+  console.log("HELKKEJLKJSF", new Date(date).toISOString());
   return new Date(date).toISOString();
 };
 

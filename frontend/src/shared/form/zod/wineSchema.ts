@@ -15,7 +15,7 @@ export const wineFormSchema = z.object({
   Premium: z.boolean().default(false),
   SpecialOccasion: z.boolean().default(false),
   Notes: z.string().optional(),
-  DrinkBy: z.string().optional().nullable(),
+  DrinkBy: z.date().nullable(),
   // Location can be added later if needed
 });
 

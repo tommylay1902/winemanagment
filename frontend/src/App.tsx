@@ -1,6 +1,6 @@
 "use client";
-import { InputHTMLAttributes, useEffect, useRef, useState } from "react";
-import { File } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarIcon, File } from "lucide-react";
 
 import {
   AddWine,
@@ -9,18 +9,17 @@ import {
 } from "../wailsjs/go/main/App.js";
 
 import {
-  Column,
   ColumnFiltersState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  RowData,
   RowSelectionState,
   SortingState,
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
+
 import {
   Table,
   TableBody,
@@ -29,9 +28,9 @@ import {
   TableHeader,
   TableRow,
 } from "./components/ui/table.js";
+
 import { generateHeaders } from "./shared/util/GenerateWineTableHeaders.js";
 import { Input } from "./components/ui/input.js";
-import { Button } from "./components/ui/button.js";
 import { useToast } from "./hooks/use-toast.js";
 import {
   DropdownMenu,
@@ -63,23 +62,28 @@ import {
 import { formConfig } from "./shared/form/wineForm.js";
 import { Checkbox } from "./components/ui/checkbox.js";
 import { getInputValue } from "./shared/util/formUtils.js";
-import { stringToTimeStamp } from "./shared/util/Date.js";
+import { stringToUSDate } from "./shared/util/Date.js";
+import { Filter } from "./components/ColumnFilter.js";
 
-// import { Button } from "./components/ui/button.js";
-declare module "@tanstack/react-table" {
-  //allows us to define custom properties for our columns
-  interface ColumnMeta<TData extends RowData, TValue> {
-    filterVariant?: "text" | "range" | "select";
-  }
-}
+import { Button } from "./components/ui/button.js";
+import { Wine } from "./shared/types/Wine.js";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./components/ui/popover.js";
+import { Calendar } from "./components/ui/calendar.js";
+import { cn } from "./lib/utils.js";
+
 function App() {
   const [wines, setWines] = useState<main.Wine[]>([]);
-  const [newId, setNewId] = useState<number>(-1);
+  const [newId, setNewId] = useState<number>(0);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filtering, setFiltering] = useState<ColumnFiltersState>([]);
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    Winery: false,
     Type: false,
     Year: false,
     Aging: false,
@@ -96,14 +100,21 @@ function App() {
   });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [globalFilter, setGlobalFilter] = useState<any>([]);
+  const [date, setDate] = useState<string>("");
 
   useEffect(() => {
     GetWines().then((data) => {
       setWines(data);
-      setNewId(data[data.length - 1].Id);
+      if (data.length > 0) setNewId(data[data.length - 1].Id);
       setIsInitialLoad(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (wines.length > 0) {
+      setNewId(wines[wines.length - 1].Id);
+    }
+  }, [wines]);
 
   const { toast } = useToast();
 
@@ -153,11 +164,15 @@ function App() {
   };
 
   const addWine = async (wine: main.Wine) => {
+    console.log(wine);
     wine.Id = newId + 1;
     setNewId(newId + 1);
-    if (wine.DrinkBy) {
-      wine.DrinkBy = stringToTimeStamp(wine.DrinkBy);
-    }
+    wine.DrinkBy = date;
+    if (date === null || date === "") wine.DrinkBy = null;
+
+    // if (wine.DrinkBy) {
+    //   wine.DrinkBy = stringToTimeStamp(wine.DrinkBy);
+    // }
     await AddWine(JSON.stringify(wine));
     setWines((prev) => [...prev, wine]);
     toast({
@@ -177,7 +192,8 @@ function App() {
       Price: 0,
       Premium: false,
       SpecialOccasion: false,
-      Notes: "Default notes",
+      Notes: "",
+      DrinkBy: "",
       // Add other default values
     },
   });
@@ -198,11 +214,12 @@ function App() {
         return true;
       },
     },
-    getCoreRowModel: getCoreRowModel(),
+    getCoreRowModel: getCoreRowModel<Wine>(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
     onColumnFiltersChange: setFiltering,
+    enableRowSelection: true,
     state: {
       columnFilters: filtering,
       sorting,
@@ -217,14 +234,14 @@ function App() {
     globalFilterFn: "includesString",
   });
 
-  const [dateInputStates, setDateInputStates] = useState<
-    Record<string, boolean>
-  >({});
+  // const [dateInputStates, setDateInputStates] = useState<
+  //   Record<string, boolean>
+  // >({});
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
   return (
     <>
-      <div className="w-full flex justify-center mt-4">
+      <div className="w-full flex justify-center mt-4 fixed top-0 left-0 right-0">
         <div className="max-w-2xl w-full px-4">
           <Input
             value={globalFilter ?? ""}
@@ -237,13 +254,13 @@ function App() {
           />
         </div>
       </div>
-      <div className="flex justify-center mt-2">
+      <div className="flex justify-center mt-[8vh]">
         <Button onClick={resetFilters} variant="outline">
           Reset <strong>All</strong> filters
         </Button>
       </div>
-      <div className="mt-10 ">
-        <div className="flex justify-between items-center w-full rounded-md ">
+      <div className="mt-4">
+        <div className="flex justify-between items-center w-full rounded-md max-h-[33vh] min-h-[3vh]">
           <div className="flex min-w-[300px] [-webkit-app-region:no-drag]">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -386,51 +403,52 @@ function App() {
                                   <div className="flex flex-col space-y-2">
                                     <FormLabel>{field.label}</FormLabel>
                                     <div className="relative">
-                                      <Input
-                                        {...formField}
-                                        type="date"
-                                        value={
-                                          (formField.value as string) ?? ""
-                                        }
-                                        onFocus={() =>
-                                          setDateInputStates((prev) => ({
-                                            ...prev,
-                                            [field.name]: true,
-                                          }))
-                                        }
-                                        onBlur={() =>
-                                          setDateInputStates((prev) => ({
-                                            ...prev,
-                                            [field.name]: false,
-                                          }))
-                                        }
-                                      />
-                                      {(formField.value ||
-                                        dateInputStates[field.name]) && (
-                                        <button
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                              "w-[240px] justify-start text-left font-normal",
+                                              !date && "text-muted-foreground"
+                                            )}
+                                          >
+                                            <CalendarIcon />
+                                            {date ? (
+                                              stringToUSDate(date)
+                                            ) : (
+                                              <span>Pick a date</span>
+                                            )}
+                                          </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                          className="w-auto p-0"
+                                          align="start"
+                                        >
+                                          <Calendar
+                                            mode="single"
+                                            selected={new Date(date)}
+                                            onSelect={(date) => {
+                                              if (date) {
+                                                setDate(date.toISOString());
+                                              }
+                                            }}
+                                            initialFocus
+                                          />
+                                        </PopoverContent>
+                                      </Popover>
+                                      {(formField.value || date) && (
+                                        <Button
                                           type="button"
-                                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                          onClick={() =>
-                                            form.setValue(field.name, null)
-                                          }
+                                          className="ml-3 mb-3"
+                                          onClick={() => {
+                                            form.setValue(field.name, "");
+                                            setDate("");
+                                          }}
                                           aria-label="Clear date"
                                           tabIndex={-1}
                                         >
-                                          <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            className="h-4 w-4"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M6 18L18 6M6 6l12 12"
-                                            />
-                                          </svg>
-                                        </button>
+                                          Clear Date
+                                        </Button>
                                       )}
                                     </div>
                                   </div>
@@ -479,7 +497,7 @@ function App() {
           </div>
         </div>
 
-        <div className="rounded-md border max-h-[calc(100vh-155px)] overflow-auto">
+        <div className="rounded-md border max-h-[calc(100vh-33vh)] overflow-auto">
           <Table className="">
             <TableHeader className="bg-slate-200 sticky top-0 z-100 border-t shadow-sm p-4 ">
               {table.getHeaderGroups().map((headerGroup) => (
@@ -528,139 +546,25 @@ function App() {
             </TableBody>
           </Table>
         </div>
-        <div className="sticky bottom-0 bg-white border-t shadow-sm p-4">
-          <div className="flex-1 text-sm text-muted-foreground">
+        <div className="sticky bottom-0 bg-white border-t  p-2">
+          <div className="text-sm text-muted-foreground leading-tight text-center">
             {isInitialLoad ? (
               "Loading..."
             ) : (
               <>
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                {table.getFilteredRowModel().rows.length} row(s) selected.
+                {table.getSelectedRowModel().rows.length} of{" "}
+                {table.getRowModel().rows.length} row(s) selected.
+                {table.getState().columnFilters.length > 0 && (
+                  <span className="ml-2">
+                    (From {table.getPreFilteredRowModel().rows.length} total)
+                  </span>
+                )}
               </>
             )}
           </div>
         </div>
       </div>
     </>
-  );
-}
-
-function Filter({ column }: { column: Column<any, unknown> }) {
-  const columnFilterValue = column.getFilterValue();
-  const { filterVariant, isBoolean, isNumeric } = column.columnDef.meta ?? {};
-
-  return filterVariant === "range" ? (
-    <div>
-      <div className="flex space-x-2">
-        {/* See faceted column filters example for min max values functionality */}
-        <DebouncedInput
-          type="number"
-          value={(columnFilterValue as [number, number])?.[0] ?? ""}
-          onChange={(value) => {
-            const current = (columnFilterValue || []) as [number, number];
-            column.setFilterValue([
-              value ? Number(value) : undefined,
-              current[1],
-            ]);
-          }}
-          placeholder={`Min ${isNumeric ? "(USD)" : ""}`}
-          className="w-24 border shadow rounded"
-          step={isNumeric ? "0.01" : "1"}
-        />
-        <DebouncedInput
-          type="number"
-          value={(columnFilterValue as [number, number])?.[1] ?? ""}
-          onChange={(value) => {
-            const current = (columnFilterValue || []) as [number, number];
-            column.setFilterValue([
-              current[0],
-              value ? Number(value) : undefined,
-            ]);
-          }}
-          placeholder={`Max ${isNumeric ? "(USD)" : ""}`}
-          className="w-24 border shadow rounded"
-          step={isNumeric ? "0.01" : "1"}
-        />
-      </div>
-      <div className="h-1" />
-    </div>
-  ) : filterVariant === "select" ? (
-    <select
-      onChange={(e) => {
-        const value = e.target.value;
-        if (isBoolean) {
-          column.setFilterValue(value === "" ? undefined : value === "true");
-        } else {
-          column.setFilterValue(value === "" ? undefined : value);
-        }
-      }}
-      value={
-        isBoolean
-          ? columnFilterValue === undefined
-            ? ""
-            : columnFilterValue
-            ? "true"
-            : "false"
-          : columnFilterValue?.toString() ?? ""
-      }
-    >
-      {/* See faceted column filters example for dynamic select options */}
-      <option value="">All</option>
-      {isBoolean ? (
-        <>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </>
-      ) : (
-        <>
-          <option value="yes">Yes</option>
-          <option value="no">No</option>
-        </>
-      )}
-    </select>
-  ) : (
-    <DebouncedInput
-      className="w-36 border shadow rounded"
-      onChange={(value) => column.setFilterValue(value)}
-      placeholder={`Search...`}
-      type="text"
-      value={(columnFilterValue ?? "") as string}
-    />
-    // See faceted column filters example for datalist search suggestions
-  );
-}
-
-// A typical debounced input react component
-function DebouncedInput({
-  value: initialValue,
-  onChange,
-  debounce = 500,
-  ...props
-}: {
-  value: string | number;
-  onChange: (value: string | number) => void;
-  debounce?: number;
-} & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange">) {
-  const [value, setValue] = useState(initialValue);
-
-  useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      onChange(value);
-    }, debounce);
-
-    return () => clearTimeout(timeout);
-  }, [value]);
-
-  return (
-    <input
-      {...props}
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-    />
   );
 }
 

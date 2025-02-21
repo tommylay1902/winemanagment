@@ -25,8 +25,8 @@ type Wine struct {
 
 func (w *Wine) String() string {
 	fields := make([]string, 16) // Explicit 16 columns
-	fields[0] = strconv.Itoa(w.Id)
 
+	fields[0] = strconv.Itoa(w.Id)
 	// Helper function for boolean conversion
 	boolToYesNo := func(b bool) string {
 		if b {

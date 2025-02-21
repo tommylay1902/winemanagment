@@ -39,24 +39,25 @@ func createWineDataWithLocation(rows [][]string) []Wine {
 	var wines []Wine
 
 	wineKeyLookup := map[int]string{
-		0:  "Winery",
-		1:  "Varietal",
-		2:  "Description",
-		3:  "Type",
-		4:  "Year",
-		5:  "Aging",
-		6:  "DrinkBy",
-		7:  "Price",
-		8:  "Premium",
-		9:  "SpecialOccasion",
-		10: "Notes",
+		0:  "Id",
+		1:  "Winery",
+		2:  "Varietal",
+		3:  "Description",
+		4:  "Type",
+		5:  "Year",
+		6:  "Aging",
+		7:  "DrinkBy",
+		8:  "Price",
+		9:  "Premium",
+		10: "SpecialOccasion",
+		11: "Notes",
 	}
 
 	locationKeyLookup := map[int]string{
-		11: "Name",
-		12: "Row",
-		13: "Bin",
-		14: "Code",
+		12: "Name",
+		13: "Row",
+		14: "Bin",
+		15: "Code",
 	}
 
 	for i, row := range rows {
@@ -68,7 +69,7 @@ func createWineDataWithLocation(rows [][]string) []Wine {
 		wineValue := reflect.ValueOf(&currWine).Elem()
 		locValue := reflect.ValueOf(&currLocation).Elem()
 		for j, cellValue := range row {
-			if j <= 10 {
+			if j <= 11 {
 				fieldName, ok := wineKeyLookup[j]
 				if !ok {
 					continue
@@ -124,6 +125,7 @@ func createWineDataWithLocation(rows [][]string) []Wine {
 		}
 		currWine.Id = i
 		currWine.Location = &currLocation
+
 		wines = append(wines, currWine)
 	}
 
@@ -145,11 +147,13 @@ func createWineDataWithLocationFromCSV(csvFilePath string) ([]Wine, error) {
 	rows, err := reader.ReadAll()
 	if err != nil {
 		return nil, fmt.Errorf("error reading CSV file: %w", err)
+	} else {
+		fmt.Println(err)
 	}
 
 	// If CSV is empty, return an empty slice
 	if len(rows) == 0 {
-		return nil, fmt.Errorf("CSV file is empty")
+		return []Wine{}, nil
 	}
 
 	var wines []Wine
@@ -189,10 +193,11 @@ func createWineDataWithLocationFromCSV(csvFilePath string) ([]Wine, error) {
 		locValue := reflect.ValueOf(&currLocation).Elem()
 
 		for j, cellValue := range row {
+
 			cellValue = strings.TrimSpace(cellValue) // Clean up whitespace
 
 			// Process Wine attributes
-			if j <= 10 {
+			if j <= 11 {
 				fieldName, ok := wineKeyLookup[j]
 				if !ok {
 					continue
@@ -258,10 +263,6 @@ func createWineDataWithLocationFromCSV(csvFilePath string) ([]Wine, error) {
 	}
 
 	return wines, nil
-}
-
-func LoadInitialExcelFile() []Wine {
-	return []Wine{}
 }
 
 func ConvertExcelImportToStorage(tempFilePath string, storagePath string) {
