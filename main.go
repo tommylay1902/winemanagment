@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"winemanagment/services"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
@@ -19,11 +20,16 @@ var assets embed.FS
 var appIcon []byte
 
 func main() {
+	dbService, err := services.NewDatabaseService()
+	if err != nil {
+		log.Fatal("Database initialization failed:", err)
+	}
+
 	// Create an instance of the app structure
-	app := NewApp()
+	app := NewApp(dbService)
 
 	// Create application with options
-	err := wails.Run(&options.App{
+	err = wails.Run(&options.App{
 		Title:     "Wine Inventory",
 		Width:     1024,
 		Height:    768,

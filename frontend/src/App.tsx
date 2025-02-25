@@ -5,6 +5,7 @@ import { CalendarIcon, File } from "lucide-react";
 import {
   AddWine,
   GetWines,
+  DeleteWines,
   ImportFileFromJstoGo,
 } from "../wailsjs/go/main/App.js";
 
@@ -36,10 +37,11 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./components/ui/dropdown-menu.js";
 import { ChevronDown } from "lucide-react";
-import { main } from "wailsjs/go/models.js";
+import { services } from "wailsjs/go/models.js";
 import {
   Dialog,
   DialogClose,
@@ -76,8 +78,8 @@ import { Calendar } from "./components/ui/calendar.js";
 import { cn } from "./lib/utils.js";
 
 function App() {
-  const [wines, setWines] = useState<main.Wine[]>([]);
-  const [newId, setNewId] = useState<number>(0);
+  const [wines, setWines] = useState<services.Wine[]>([]);
+  // const [newId, setNewId] = useState<number>(0);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filtering, setFiltering] = useState<ColumnFiltersState>([]);
@@ -104,15 +106,15 @@ function App() {
 
   useEffect(() => {
     GetWines().then((data) => {
+      console.log(data);
       setWines(data);
-      if (data.length > 0) setNewId(data[data.length - 1].Id);
       setIsInitialLoad(false);
     });
   }, []);
 
   useEffect(() => {
     if (wines.length > 0) {
-      setNewId(wines[wines.length - 1].Id);
+      // setNewId(wines[wines.length - 1].ID);
     }
   }, [wines]);
 
@@ -163,17 +165,12 @@ function App() {
     }
   };
 
-  const addWine = async (wine: main.Wine) => {
-    console.log(wine);
-    wine.Id = newId + 1;
-    setNewId(newId + 1);
+  const addWine = async (wine: services.Wine) => {
     wine.DrinkBy = date;
     if (date === null || date === "") wine.DrinkBy = null;
 
-    // if (wine.DrinkBy) {
-    //   wine.DrinkBy = stringToTimeStamp(wine.DrinkBy);
-    // }
-    await AddWine(JSON.stringify(wine));
+    const id = await AddWine(JSON.stringify(wine));
+    wine.ID = id;
     setWines((prev) => [...prev, wine]);
     toast({
       title: "Success!",
@@ -181,7 +178,33 @@ function App() {
     });
   };
 
-  const form = useForm<main.Wine>({
+  const deleteWines = async () => {
+    try {
+      const ids = Object.keys(rowSelection);
+      await DeleteWines(ids);
+
+      const numericIds = ids.map((id) => parseInt(id));
+
+      setWines((prev) => prev.filter((w) => !numericIds.includes(w.ID)));
+      setRowSelection({});
+      toast({
+        title: "Success!",
+        description: `Successfully Deleted ${ids.length} wine(s)`,
+      });
+    } catch (error) {
+      toast({
+        title: "Something went wrong",
+        description: `Something went wrong when trying to delete...`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const editWine = () => {
+    console.log(rowSelection);
+  };
+
+  const form = useForm<services.Wine>({
     defaultValues: {
       Winery: "",
       Varietal: "",
@@ -229,7 +252,7 @@ function App() {
     },
     onColumnVisibilityChange: setColumnVisibility,
     onSortingChange: setSorting,
-    getRowId: (row) => row.Id + "",
+    getRowId: (row) => row.ID + "",
     autoResetPageIndex: false, // Add this line
     globalFilterFn: "includesString",
   });
@@ -269,6 +292,7 @@ function App() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                {/* Existing column checkboxes */}
                 {table
                   .getAllColumns()
                   .filter(
@@ -281,17 +305,47 @@ function App() {
                       className="capitalize"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) => {
-                        //reset the filter value
-                        if (!value) {
-                          column.setFilterValue("");
-                        }
+                        if (!value) column.setFilterValue("");
                         column.toggleVisibility(!!value);
                       }}
-                      onSelect={(e) => e.preventDefault()} // Prevent menu close on select
+                      onSelect={(e) => e.preventDefault()}
                     >
                       {column.id}
                     </DropdownMenuCheckboxItem>
                   ))}
+
+                {/* Add divider and action buttons */}
+                <DropdownMenuSeparator />
+                <div className="flex flex-col gap-1 p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      table
+                        .getAllColumns()
+                        .filter(
+                          (col) => col.getCanHide() && col.id !== "select-col"
+                        )
+                        .forEach((col) => col.toggleVisibility(true));
+                    }}
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      table
+                        .getAllColumns()
+                        .filter(
+                          (col) => col.getCanHide() && col.id !== "select-col"
+                        )
+                        .forEach((col) => col.toggleVisibility(false));
+                    }}
+                  >
+                    Deselect All
+                  </Button>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
@@ -326,14 +380,16 @@ function App() {
             {Object.keys(rowSelection).length > 0 && (
               <>
                 <Button
-                  variant="ghost"
-                  className="rounded-none border-b-2 border-r-2 border-primary bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0 hover:border-r-0"
+                  variant="outline"
+                  className=" bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0 hover:border-r-0"
+                  onClick={editWine}
                 >
                   Edit Wine(s)
                 </Button>
                 <Button
-                  variant="ghost"
-                  className="rounded-none border-b-2 border-primary bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0"
+                  variant="outline"
+                  className=" bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0"
+                  onClick={deleteWines}
                 >
                   Delete Wine(s)
                 </Button>
@@ -343,8 +399,8 @@ function App() {
             <Dialog>
               <DialogTrigger asChild>
                 <Button
-                  variant="ghost"
-                  className="rounded-none border-b-2 border-l-2 border-primary bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0 hover:border-l-0"
+                  variant="outline"
+                  className=" bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0 hover:border-l-0"
                 >
                   Add Wine+
                 </Button>
@@ -546,18 +602,22 @@ function App() {
             </TableBody>
           </Table>
         </div>
-        <div className="sticky bottom-0 bg-white border-t  p-2">
+        <div
+          key={wines.length}
+          className="sticky bottom-0 bg-white border-t p-2"
+        >
           <div className="text-sm text-muted-foreground leading-tight text-center">
             {isInitialLoad ? (
               "Loading..."
             ) : (
               <>
-                {table.getSelectedRowModel().rows.length} of{" "}
-                {table.getRowModel().rows.length} row(s) selected.
+                {Object.keys(rowSelection).length} of{" "}
+                {showSelectedOnly
+                  ? Object.keys(rowSelection).length
+                  : wines.length}{" "}
+                row(s) selected.
                 {table.getState().columnFilters.length > 0 && (
-                  <span className="ml-2">
-                    (From {table.getPreFilteredRowModel().rows.length} total)
-                  </span>
+                  <span className="ml-2">(From {wines.length} total)</span>
                 )}
               </>
             )}

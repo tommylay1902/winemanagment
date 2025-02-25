@@ -3,34 +3,38 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"strconv"
+	"winemanagment/services"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx       context.Context
+	dbService *services.DatabaseService
 }
 
 // NewApp creates a new App application struct
-func NewApp() *App {
-	return &App{}
+func NewApp(dbService *services.DatabaseService) *App {
+	return &App{
+		dbService: dbService,
+	}
 }
 
 // startup is called at application startup
 func (a *App) startup(ctx context.Context) {
 	// Perform your setup here
 	a.ctx = ctx
-	err := InitializeStorage()
-	if err != nil {
-		runtime.LogError(a.ctx, "Storage initialization failed: "+err.Error())
-	}
+	// err := InitializeStorage()
+
+	// if err != nil {
+	// 	runtime.LogError(a.ctx, "Storage initialization failed: "+err.Error())
+	// }
 
 }
 
@@ -51,26 +55,20 @@ func (a *App) shutdown(ctx context.Context) {
 	// Perform your teardown here
 }
 
-func (a *App) GetWines() []Wine {
-	// wines, _ := createWineDataWithLocationFromCSV("./resources/storage.csv")
-	// fmt.Println(len(wines))
-	// return wines
-	path, err := GetStoragePath()
-	if err != nil {
-		fmt.Println("Error getting storage path:", err)
-		return []Wine{}
+func (a *App) DeleteWines(id []string) error {
+	fmt.Println(id)
+	var uintIDs []uint
+	for _, idStr := range id {
+		id, err := strconv.ParseUint(idStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid ID format: %s", idStr)
+		}
+		uintIDs = append(uintIDs, uint(id))
 	}
 
-	wines, err := createWineDataWithLocationFromCSV(path)
-	for _, w := range wines {
-		fmt.Println(w)
-	}
-	if err != nil {
-		fmt.Println(err)
-		return []Wine{}
-	}
-
-	return wines
+	// a.dbService.DeleteWineByID(uintIDs[0])
+	a.dbService.DeleteWines(uintIDs)
+	return nil
 }
 
 func (a *App) SelectFile() string {
@@ -90,41 +88,37 @@ func (a *App) ImportFileFromJstoGo(blob string) {
 	}
 
 	// Save the file to a temporary location as .xlsx
-	tempFilePath := "/tmp/uploaded_file.xlsx"
-	err = os.WriteFile(tempFilePath, fileContent, 0644)
+	tmpFile, err := os.CreateTemp("", "wine-import-*.xlsx")
 	if err != nil {
-		fmt.Println("Error saving file:", err)
+		runtime.LogError(a.ctx, fmt.Sprintf("Temp file creation error: %v", err))
 		return
 	}
-	defer os.Remove(tempFilePath) // Clean up the temp file after processing
+	defer func() {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+	}()
 
-	storagePath, err := GetStoragePath()
-	if err != nil {
-		runtime.LogError(a.ctx, "Path error: "+err.Error())
+	// Write the content to temp file
+	if _, err := tmpFile.Write(fileContent); err != nil {
+		runtime.LogError(a.ctx, fmt.Sprintf("File write error: %v", err))
 		return
 	}
-	// Pass correct storage path to converter
-	ConvertExcelImportToStorage(tempFilePath, storagePath)
-}
 
-func (a *App) AddWine(data string) error {
-
-	wine := Wine{}
-	json.Unmarshal([]byte(data), &wine)
-	fmt.Println("Adding WINE", wine)
-	path, _ := GetStoragePath()
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
+	if err := tmpFile.Sync(); err != nil {
+		runtime.LogError(a.ctx, fmt.Sprintf("File sync error: %v", err))
+		return
 	}
-	defer file.Close()
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-	wineArr := strings.Split(wine.String(), ",")
 
-	err = writer.Write(wineArr)
+	wines, err := ImportExcelData(tmpFile.Name())
+	if err != nil {
+		runtime.LogError(a.ctx, fmt.Sprintf("Import error: %v", err))
+		return
+	}
 
-	return err
+	if err := a.dbService.ProcessWineImport(wines); err != nil {
+		runtime.LogError(a.ctx, fmt.Sprintf("Database error: %v", err))
+		return
+	}
 
 }
 
@@ -136,28 +130,27 @@ func GetStoragePath() (string, error) {
 	}
 	exeDir := filepath.Dir(exePath)
 	storagePath := filepath.Join(exeDir, "storage.csv")
-
-	// Option 2: Use user-specific storage (recommended for writable files)
-	// usr, _ := user.Current()
-	// storagePath = filepath.Join(usr.HomeDir, ".yourapp", "storage.csv")
 	return storagePath, nil
 }
 
-func InitializeStorage() error {
-	path, err := GetStoragePath()
+func (a *App) GetWines() []services.Wine {
+	wines, err := a.dbService.GetAllWines()
 	if err != nil {
-		return err
+		runtime.LogError(a.ctx, fmt.Sprintf("Error getting wines: %v", err))
+		return []services.Wine{}
+	}
+	return wines
+}
+
+func (a *App) AddWine(data string) (*uint, error) {
+	var wine services.Wine
+	if err := json.Unmarshal([]byte(data), &wine); err != nil {
+		return nil, fmt.Errorf("error unmarshaling wine data: %w", err)
+	}
+	err := a.dbService.CreateWine(&wine)
+	if err != nil {
+		return nil, err
 	}
 
-	// Create directory if using user-specific storage
-	// os.MkdirAll(filepath.Dir(path), 0755)
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		file, err := os.Create(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-	}
-	return nil
+	return &wine.ID, nil
 }

@@ -3,12 +3,13 @@ import {
   RowData,
   SortingState,
 } from "@tanstack/react-table";
-import { Wine } from "../types/Wine";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { stringToJSDate, stringToUSDate } from "./Date";
 import { SortHeader } from "@/components/SortHeader";
+import { services } from "wailsjs/go/models";
 
-const columnHelper = createColumnHelper<Wine>();
+const columnHelper = createColumnHelper<services.Wine>();
 
 declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
@@ -44,38 +45,42 @@ export const generateHeaders = (sorting: SortingState) => {
     columnHelper.accessor("Varietal", {
       cell: (info) => info.getValue(),
       header: ({ header }) => (
-        <SortHeader<Wine> header={header} title="Varietal" />
+        <SortHeader<services.Wine> header={header} title="Varietal" />
       ),
     }),
     columnHelper.accessor((row) => row.Winery, {
       id: "Winery",
       cell: (info) => info.getValue(),
       header: ({ header }) => (
-        <SortHeader<Wine> header={header} title="Winery" />
+        <SortHeader<services.Wine> header={header} title="Winery" />
       ),
     }),
     columnHelper.accessor((row) => row.Description, {
       id: "Description",
       cell: (info) => info.getValue(),
       header: ({ header }) => (
-        <SortHeader<Wine> header={header} title="Description" />
+        <SortHeader<services.Wine> header={header} title="Description" />
       ),
     }),
     columnHelper.accessor((row) => row.Type, {
       id: "Type",
       cell: (info) => info.getValue(),
-      header: ({ header }) => <SortHeader<Wine> header={header} title="Type" />,
+      header: ({ header }) => (
+        <SortHeader<services.Wine> header={header} title="Type" />
+      ),
     }),
     columnHelper.accessor((row) => row.Year, {
       id: "Year",
       cell: (info) => info.getValue(),
-      header: ({ header }) => <SortHeader<Wine> header={header} title="Year" />,
+      header: ({ header }) => (
+        <SortHeader<services.Wine> header={header} title="Year" />
+      ),
     }),
     columnHelper.accessor((row) => row.Aging, {
       id: "Aging",
       cell: (info) => (info.getValue() ? "Yes" : "No"),
       header: ({ header }) => (
-        <SortHeader<Wine> header={header} title="Aging" />
+        <SortHeader<services.Wine> header={header} title="Aging" />
       ),
       meta: {
         filterVariant: "select",
@@ -86,7 +91,7 @@ export const generateHeaders = (sorting: SortingState) => {
       id: "Drink By",
       cell: (info) => stringToUSDate(info.getValue() ? info.getValue() : ""),
       header: ({ header }) => (
-        <SortHeader<Wine> header={header} title="Drink By" />
+        <SortHeader<services.Wine> header={header} title="Drink By" />
       ),
       sortingFn: (a, b, columnId) => {
         const notValidCompareA = !a.original.DrinkBy;
@@ -113,7 +118,7 @@ export const generateHeaders = (sorting: SortingState) => {
       id: "Price",
       cell: (info) => info.getValue(),
       header: ({ header }) => (
-        <SortHeader<Wine> header={header} title="Price" />
+        <SortHeader<services.Wine> header={header} title="Price" />
       ),
       meta: {
         filterVariant: "range",
