@@ -78,6 +78,7 @@ import { Calendar } from "./components/ui/calendar.js";
 import { cn } from "./lib/utils.js";
 
 function App() {
+  const [updatedWines, setUpdatedWines] = useState<services.Wine[]>([]);
   const [wines, setWines] = useState<services.Wine[]>([]);
   // const [newId, setNewId] = useState<number>(0);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -103,6 +104,9 @@ function App() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [globalFilter, setGlobalFilter] = useState<any>([]);
   const [date, setDate] = useState<string>("");
+  const [selectedWines, setSelectedWines] = useState<services.Wine[]>([]);
+  const [currentEditIndex, setCurrentEditIndex] = useState(0);
+  const [_, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     GetWines().then((data) => {
@@ -117,6 +121,64 @@ function App() {
       // setNewId(wines[wines.length - 1].ID);
     }
   }, [wines]);
+
+  const addForm = useForm<services.Wine>({
+    defaultValues: {
+      Winery: "",
+      Varietal: "",
+      Description: "",
+      Type: "Red",
+      Year: new Date().getFullYear(),
+      Aging: false,
+      Price: 0,
+      Premium: false,
+      SpecialOccasion: false,
+      Notes: "",
+      DrinkBy: "",
+    },
+  });
+
+  const editForm = useForm<services.Wine>({
+    defaultValues: {
+      Winery: "",
+      Varietal: "",
+      Description: "",
+      Type: "Red",
+      Year: new Date().getFullYear(),
+      Aging: false,
+      Price: 0,
+      Premium: false,
+      SpecialOccasion: false,
+      Notes: "",
+      DrinkBy: "",
+      // Add other default values
+    },
+  });
+
+  useEffect(() => {
+    if (selectedWines.length > 0) {
+      // Get the current wine being edited
+      const currentWine = selectedWines[currentEditIndex];
+
+      // Reset the form with current wine's values
+      editForm.reset({
+        ...currentWine,
+        // Convert date string to Date object if needed
+        DrinkBy: currentWine.DrinkBy ? new Date(currentWine.DrinkBy) : null,
+      });
+
+      // Update the date state for the calendar
+      setDate(currentWine.DrinkBy || "");
+    }
+  }, [currentEditIndex, selectedWines, editForm]);
+
+  useEffect(() => {
+    if (updatedWines.length > 0) {
+      const currentWine = updatedWines[currentEditIndex];
+      editForm.reset(currentWine);
+      setDate(currentWine.DrinkBy || "");
+    }
+  }, [currentEditIndex, updatedWines, editForm]);
 
   const { toast } = useToast();
 
@@ -200,26 +262,53 @@ function App() {
     }
   };
 
-  const editWine = () => {
-    console.log(rowSelection);
-  };
+  const handleEditSubmit = (formData: services.Wine) => {
+    // Get the original wine to preserve methods
+    const originalWine = selectedWines[currentEditIndex];
 
-  const form = useForm<services.Wine>({
-    defaultValues: {
-      Winery: "",
-      Varietal: "",
-      Description: "",
-      Type: "Red",
-      Year: new Date().getFullYear(),
-      Aging: false,
-      Price: 0,
-      Premium: false,
-      SpecialOccasion: false,
-      Notes: "",
-      DrinkBy: "",
-      // Add other default values
-    },
-  });
+    // Merge changes while preserving original methods
+    const updatedWine: services.Wine = {
+      ...originalWine, // Preserves convertValues and other methods
+      ...formData, // Applies form changes
+      DrinkBy: date, // Add explicit date field
+      ID: originalWine.ID,
+      convertValues: originalWine.convertValues,
+    };
+
+    // Update the modified wines array
+    const newUpdatedWines = [...updatedWines];
+    newUpdatedWines[currentEditIndex] = updatedWine;
+    setUpdatedWines(newUpdatedWines);
+
+    // Rest of your existing logic...
+    if (currentEditIndex < selectedWines.length - 1) {
+      setCurrentEditIndex((prev) => prev + 1);
+    } else {
+      submitAllUpdates(newUpdatedWines);
+      setIsEditDialogOpen(false);
+    }
+  };
+  const submitAllUpdates = async (updatedWines: services.Wine[]) => {
+    try {
+      // Call your API endpoint here
+      // await UpdateWines(updatedWines);
+
+      // Update local state
+      const newWines = wines.map((wine) => {
+        const updated = updatedWines.find((u) => u.ID === wine.ID);
+        return updated || wine;
+      });
+      setWines(newWines);
+
+      toast({ title: "Success!", description: "All changes saved" });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save changes",
+        variant: "destructive",
+      });
+    }
+  };
 
   const columns = generateHeaders(sorting);
 
@@ -355,7 +444,7 @@ function App() {
               View:
               {showSelectedOnly ? " Selected" : " All"}
             </Button>
-            {/* future implementation */}
+
             {Object.keys(rowSelection).length > 0 && (
               <Button variant="outline">Locate Selected</Button>
             )}
@@ -379,13 +468,206 @@ function App() {
           <div className="min-w-[100px] text-right">
             {Object.keys(rowSelection).length > 0 && (
               <>
-                <Button
-                  variant="outline"
-                  className=" bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0 hover:border-r-0"
-                  onClick={editWine}
-                >
-                  Edit Wine(s)
-                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0 hover:border-r-0"
+                      onClick={() => {
+                        const ids = Object.keys(rowSelection);
+                        const selected = wines.filter((wine) =>
+                          ids.includes(String(wine.ID))
+                        );
+                        setSelectedWines(selected);
+                        setUpdatedWines([...selected]); // Clone selected wines
+                        setCurrentEditIndex(0);
+                      }}
+                    >
+                      Edit Wine(s)
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>
+                        Editing{" "}
+                        {selectedWines[currentEditIndex]?.Description ||
+                          "Selected Wine"}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <Form {...editForm}>
+                        <form
+                          onSubmit={editForm.handleSubmit(handleEditSubmit)}
+                          className="space-y-4"
+                        >
+                          <div className="flex flex-row items-center justify-between">
+                            {formConfig
+                              .filter((field) => field.type === "checkbox")
+                              .map((field) => (
+                                <FormField
+                                  key={field.name}
+                                  control={editForm.control}
+                                  name={field.name}
+                                  render={({ field: formField }) => (
+                                    <FormItem>
+                                      <FormControl className="pb-[.25vh]">
+                                        <Checkbox
+                                          checked={!!formField.value}
+                                          onCheckedChange={(checked) => {
+                                            const value =
+                                              checked === "indeterminate"
+                                                ? false
+                                                : checked;
+                                            formField.onChange(value);
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="!m-0">
+                                        {field.label}
+                                      </FormLabel>
+                                    </FormItem>
+                                  )}
+                                />
+                              ))}
+                          </div>
+                          {formConfig
+                            .filter((field) => field.type !== "checkbox")
+                            .map((field) => (
+                              <FormField
+                                key={field.name}
+                                control={editForm.control}
+                                name={field.name}
+                                render={({ field: formField }) => (
+                                  <FormItem>
+                                    {field.type === "date" ? (
+                                      <div className="flex flex-col space-y-2">
+                                        <FormLabel>{field.label}</FormLabel>
+                                        <div className="relative">
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                              <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                  "w-[240px] justify-start text-left font-normal",
+                                                  !date &&
+                                                    "text-muted-foreground"
+                                                )}
+                                              >
+                                                <CalendarIcon />
+                                                {date ? (
+                                                  stringToUSDate(date)
+                                                ) : (
+                                                  <span>Pick a date</span>
+                                                )}
+                                              </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent
+                                              className="w-auto p-0"
+                                              align="start"
+                                            >
+                                              <Calendar
+                                                mode="single"
+                                                selected={new Date(date)}
+                                                onSelect={(date) => {
+                                                  if (date) {
+                                                    setDate(date.toISOString());
+                                                  }
+                                                }}
+                                                initialFocus
+                                              />
+                                            </PopoverContent>
+                                          </Popover>
+                                          {(formField.value || date) && (
+                                            <Button
+                                              type="button"
+                                              className="ml-3 mb-3"
+                                              onClick={() => {
+                                                editForm.setValue(
+                                                  field.name,
+                                                  ""
+                                                );
+                                                setDate("");
+                                              }}
+                                              aria-label="Clear date"
+                                              tabIndex={-1}
+                                            >
+                                              Clear Date
+                                            </Button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <FormLabel>{field.label}</FormLabel>
+                                        <FormControl>
+                                          <Input
+                                            {...formField}
+                                            placeholder={field.placeholder}
+                                            type={field.type}
+                                            value={getInputValue(
+                                              formField.value,
+                                              field.type
+                                            )}
+                                            onChange={(e) => {
+                                              if (field.type === "number") {
+                                                const value = Number(
+                                                  e.target.value
+                                                );
+                                                formField.onChange(
+                                                  isNaN(value) ? 0 : value
+                                                );
+                                              } else {
+                                                formField.onChange(
+                                                  e.target.value
+                                                );
+                                              }
+                                            }}
+                                          />
+                                        </FormControl>
+                                      </>
+                                    )}
+                                  </FormItem>
+                                )}
+                              />
+                            ))}
+                          <DialogFooter className="flex items-center justify-between">
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={currentEditIndex === 0}
+                                onClick={() =>
+                                  setCurrentEditIndex((prev) => prev - 1)
+                                }
+                              >
+                                Previous
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={
+                                  currentEditIndex === selectedWines.length - 1
+                                }
+                                onClick={() =>
+                                  setCurrentEditIndex((prev) => prev + 1)
+                                }
+                              >
+                                Next
+                              </Button>
+                            </div>
+                            <div>
+                              {currentEditIndex + 1} of {selectedWines.length}
+                            </div>
+                            <div>
+                              <Button type="submit">Save Changes</Button>
+                            </div>
+                          </DialogFooter>
+                        </form>
+                      </Form>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
                 <Button
                   variant="outline"
                   className=" bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0"
@@ -401,6 +683,9 @@ function App() {
                 <Button
                   variant="outline"
                   className=" bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0 hover:border-l-0"
+                  onClick={() => {
+                    addForm.reset();
+                  }}
                 >
                   Add Wine+
                 </Button>
@@ -411,9 +696,9 @@ function App() {
                   <DialogDescription>Add Your Wine Here</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <Form {...form}>
+                  <Form {...addForm}>
                     <form
-                      onSubmit={form.handleSubmit(addWine)}
+                      onSubmit={addForm.handleSubmit(addWine)}
                       className="space-y-4"
                     >
                       <div className="flex flex-row items-center justify-between">
@@ -422,7 +707,7 @@ function App() {
                           .map((field) => (
                             <FormField
                               key={field.name}
-                              control={form.control}
+                              control={addForm.control}
                               name={field.name}
                               render={({ field: formField }) => (
                                 <FormItem>
@@ -451,7 +736,7 @@ function App() {
                         .map((field) => (
                           <FormField
                             key={field.name}
-                            control={form.control}
+                            control={addForm.control}
                             name={field.name}
                             render={({ field: formField }) => (
                               <FormItem>
@@ -497,7 +782,7 @@ function App() {
                                           type="button"
                                           className="ml-3 mb-3"
                                           onClick={() => {
-                                            form.setValue(field.name, "");
+                                            addForm.setValue(field.name, "");
                                             setDate("");
                                           }}
                                           aria-label="Clear date"

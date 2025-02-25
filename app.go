@@ -119,7 +119,6 @@ func (a *App) ImportFileFromJstoGo(blob string) {
 		runtime.LogError(a.ctx, fmt.Sprintf("Database error: %v", err))
 		return
 	}
-
 }
 
 func GetStoragePath() (string, error) {

@@ -55,10 +55,12 @@ func ImportExcelData(filepath string) ([]services.Wine, error) {
 		var year *int
 
 		if strings.TrimSpace(row[yearCol]) != "" {
-			year, err := strconv.Atoi(row[yearCol])
-			if err != nil || year < 1900 || year > 2100 {
+
+			y, err := strconv.Atoi(row[yearCol])
+			if err != nil || y < 1900 || y > 2100 {
 				return nil, fmt.Errorf("invalid year in row %d: %s", i+1, row[yearCol])
 			}
+			year = &y
 		}
 
 		// Parse price
@@ -87,6 +89,8 @@ func ImportExcelData(filepath string) ([]services.Wine, error) {
 				Code: row[codeCol],
 			},
 		}
+
+		fmt.Println("printing wine year: ", wine.Year)
 
 		wines = append(wines, wine)
 	}

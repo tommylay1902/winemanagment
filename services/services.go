@@ -150,6 +150,7 @@ func (s *DatabaseService) CreateWines(wines []Wine) error {
 func (s *DatabaseService) DeleteWineByID(id uint) error {
 	return s.db.Delete(&Wine{}, id).Error
 }
+
 func (s *DatabaseService) DeleteWines(ids []uint) error {
 	return s.db.Where("id IN ?", ids).Delete(&Wine{}).Error
 }
@@ -203,6 +204,7 @@ func (s *DatabaseService) ProcessWineImport(wines []Wine) error {
 		return tx.CreateInBatches(wines, batchSize).Error
 	})
 }
+
 func (s *DatabaseService) Close() error {
 	sqlDB, err := s.db.DB()
 	if err != nil {
