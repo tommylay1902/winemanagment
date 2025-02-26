@@ -17,8 +17,9 @@ type DatabaseService struct {
 
 type Wine struct {
 	gorm.Model
-	Winery          string `gorm:"not null"`
-	Varietal        string `gorm:"not null"`
+	WineryID        *uint
+	Winery          *Winery `gorm:"foreignKey:WineryID"`
+	Varietal        string  `gorm:"not null"`
 	Description     string
 	Type            string `gorm:"not null"`
 	Year            *int
@@ -30,6 +31,11 @@ type Wine struct {
 	Notes           string
 	LocationID      *uint
 	Location        *Location `gorm:"foreignKey:LocationID"`
+}
+
+type Winery struct {
+	gorm.Model
+	Name string `gorm:"unique;"`
 }
 
 type Location struct {
@@ -55,7 +61,7 @@ func NewDatabaseService() (*DatabaseService, error) {
 	}
 
 	appDir := filepath.Join(configDir, "winemanagment")
-	fmt.Println("HELLOOOOOO", appDir)
+
 	if err := os.MkdirAll(appDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create app directory: %w", err)
 	}
@@ -71,13 +77,13 @@ func NewDatabaseService() (*DatabaseService, error) {
 	}
 
 	// drop table logic if we are updating schema
-	// err = db.Migrator().DropTable(&Wine{}, &Location{}, &WineStorage{})
-	// if err != nil {
-	// 	return nil, err
-	// }
+	err = db.Migrator().DropTable(&Winery{}, &Wine{}, &Location{}, &WineStorage{})
+	if err != nil {
+		return nil, err
+	}
 
 	// Auto migrate schema
-	err = db.AutoMigrate(&Wine{}, &Location{}, &WineStorage{})
+	err = db.AutoMigrate(&Winery{}, &Wine{}, &Location{}, &WineStorage{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
@@ -108,7 +114,7 @@ func NewDatabaseService() (*DatabaseService, error) {
 
 func (s *DatabaseService) GetAllWines() ([]Wine, error) {
 	var wines []Wine
-	result := s.db.Preload("Location").Find(&wines)
+	result := s.db.Preload("Location").Preload("Winery").Find(&wines)
 
 	return wines, result.Error
 }
@@ -159,9 +165,35 @@ func (s *DatabaseService) ProcessWineImport(wines []Wine) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		// First create all locations
 		locationCache := make(map[string]uint)
+		wineryCache := make(map[string]uint)
 
-		// Process locations first
+		// Process locations and wineries first
 		for i := range wines {
+			if w := wines[i].Winery; w != nil {
+
+				if wID, exists := wineryCache[w.Name]; exists {
+					wines[i].WineryID = &wID
+					wines[i].Winery = nil
+				} else {
+					var existingWinery Winery
+					err := tx.Where(
+						"name = ?",
+						w.Name,
+					).First(&existingWinery).Error
+
+					if err != nil {
+						if err := tx.Create(w).Error; err != nil {
+							return err
+						}
+						wineryCache[w.Name] = w.ID
+						wines[i].WineryID = &w.ID
+					} else {
+						wines[i].WineryID = &existingWinery.ID
+						// wines[i].Winery = nil
+					}
+					wines[i].Winery = nil
+				}
+			}
 			if loc := wines[i].Location; loc != nil {
 				// Create consistent key for Storage with empty row/bin
 				locKey := fmt.Sprintf("%s|%s|%s",
@@ -203,6 +235,18 @@ func (s *DatabaseService) ProcessWineImport(wines []Wine) error {
 		const batchSize = 50
 		return tx.CreateInBatches(wines, batchSize).Error
 	})
+}
+
+func (s *DatabaseService) GetAllWineries() ([]Winery, error) {
+	var wineries []Winery
+	result := s.db.Find(&wineries)
+	return wineries, result.Error
+}
+
+func (s *DatabaseService) CreateWinery(name string) (*Winery, error) {
+	winery := Winery{Name: name}
+	result := s.db.Create(&winery)
+	return &winery, result.Error
 }
 
 func (s *DatabaseService) Close() error {

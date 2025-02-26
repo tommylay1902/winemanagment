@@ -13,7 +13,12 @@ const columnHelper = createColumnHelper<services.Wine>();
 
 declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
-    filterVariant?: "text" | "range" | "select" | "range-date";
+    filterVariant?:
+      | "text"
+      | "range"
+      | "select"
+      | "range-date"
+      | "select-winery";
     isBoolean?: boolean; // Add this line
     isNumeric?: boolean;
   }
@@ -47,13 +52,23 @@ export const generateHeaders = (sorting: SortingState) => {
       header: ({ header }) => (
         <SortHeader<services.Wine> header={header} title="Varietal" />
       ),
+      meta: { filterVariant: "text" },
     }),
-    columnHelper.accessor((row) => row.Winery, {
+
+    columnHelper.accessor((row) => row.Winery?.Name ?? "", {
       id: "Winery",
       cell: (info) => info.getValue(),
       header: ({ header }) => (
         <SortHeader<services.Wine> header={header} title="Winery" />
       ),
+      filterFn: (row, columnId, filterValue: string[]) => {
+        if (!filterValue?.length) return true;
+        const wineryName = row.getValue<string>(columnId) || "";
+        return filterValue.includes(wineryName);
+      },
+      meta: {
+        filterVariant: "select-winery",
+      },
     }),
     columnHelper.accessor((row) => row.Description, {
       id: "Description",

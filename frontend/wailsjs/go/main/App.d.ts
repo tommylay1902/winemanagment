@@ -6,6 +6,8 @@ export function AddWine(arg1:string):Promise<any>;
 
 export function DeleteWines(arg1:Array<string>):Promise<void>;
 
+export function GetAllWineries():Promise<Array<services.Winery>>;
+
 export function GetWines():Promise<Array<services.Wine>>;
 
 export function ImportFileFromJstoGo(arg1:string):Promise<void>;

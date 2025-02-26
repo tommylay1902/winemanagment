@@ -47,6 +47,47 @@ export namespace services {
 		    return a;
 		}
 	}
+	export class Winery {
+	    ID: number;
+	    // Go type: time
+	    CreatedAt: any;
+	    // Go type: time
+	    UpdatedAt: any;
+	    // Go type: gorm
+	    DeletedAt: any;
+	    Name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Winery(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.CreatedAt = this.convertValues(source["CreatedAt"], null);
+	        this.UpdatedAt = this.convertValues(source["UpdatedAt"], null);
+	        this.DeletedAt = this.convertValues(source["DeletedAt"], null);
+	        this.Name = source["Name"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Wine {
 	    ID: number;
 	    // Go type: time
@@ -55,7 +96,8 @@ export namespace services {
 	    UpdatedAt: any;
 	    // Go type: gorm
 	    DeletedAt: any;
-	    Winery: string;
+	    WineryID?: number;
+	    Winery?: Winery;
 	    Varietal: string;
 	    Description: string;
 	    Type: string;
@@ -80,7 +122,8 @@ export namespace services {
 	        this.CreatedAt = this.convertValues(source["CreatedAt"], null);
 	        this.UpdatedAt = this.convertValues(source["UpdatedAt"], null);
 	        this.DeletedAt = this.convertValues(source["DeletedAt"], null);
-	        this.Winery = source["Winery"];
+	        this.WineryID = source["WineryID"];
+	        this.Winery = this.convertValues(source["Winery"], Winery);
 	        this.Varietal = source["Varietal"];
 	        this.Description = source["Description"];
 	        this.Type = source["Type"];

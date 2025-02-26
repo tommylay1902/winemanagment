@@ -141,6 +141,15 @@ func (a *App) GetWines() []services.Wine {
 	return wines
 }
 
+func (a *App) GetAllWineries() []services.Winery {
+	wineries, err := a.dbService.GetAllWineries()
+	if err != nil {
+		runtime.LogError(a.ctx, fmt.Sprintf("Error getting wines: %v", err))
+		return []services.Winery{}
+	}
+	return wineries
+}
+
 func (a *App) AddWine(data string) (*uint, error) {
 	var wine services.Wine
 	if err := json.Unmarshal([]byte(data), &wine); err != nil {

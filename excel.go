@@ -71,7 +71,9 @@ func ImportExcelData(filepath string) ([]services.Wine, error) {
 
 		// Create wine with location info
 		wine := services.Wine{
-			Winery:          row[wineryCol],
+			Winery: &services.Winery{
+				Name: row[wineryCol],
+			},
 			Varietal:        row[varietalCol],
 			Description:     row[descriptionCol],
 			Type:            row[typeCol],
@@ -89,8 +91,6 @@ func ImportExcelData(filepath string) ([]services.Wine, error) {
 				Code: row[codeCol],
 			},
 		}
-
-		fmt.Println("printing wine year: ", wine.Year)
 
 		wines = append(wines, wine)
 	}

@@ -1,13 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { CalendarIcon, File } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarIcon } from "lucide-react";
 
-import {
-  AddWine,
-  GetWines,
-  DeleteWines,
-  ImportFileFromJstoGo,
-} from "../wailsjs/go/main/App.js";
+import { AddWine, GetWines, DeleteWines } from "../wailsjs/go/main/App.js";
 
 import {
   ColumnFiltersState,
@@ -33,14 +28,7 @@ import {
 import { generateHeaders } from "./shared/util/GenerateWineTableHeaders.js";
 import { Input } from "./components/ui/input.js";
 import { useToast } from "./hooks/use-toast.js";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./components/ui/dropdown-menu.js";
-import { ChevronDown } from "lucide-react";
+
 import { services } from "wailsjs/go/models.js";
 import {
   Dialog,
@@ -76,6 +64,8 @@ import {
 } from "./components/ui/popover.js";
 import { Calendar } from "./components/ui/calendar.js";
 import { cn } from "./lib/utils.js";
+import ColumnVisibilityDropDown from "./components/ColumnVisibilityDropDown.js";
+import FileImporter from "./components/FileImporter.js";
 
 function App() {
   const [updatedWines, setUpdatedWines] = useState<services.Wine[]>([]);
@@ -101,12 +91,12 @@ function App() {
     Bin: false,
     Code: false,
   });
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [_initalLoad, setIsInitialLoad] = useState(true);
   const [globalFilter, setGlobalFilter] = useState<any>([]);
   const [date, setDate] = useState<string>("");
   const [selectedWines, setSelectedWines] = useState<services.Wine[]>([]);
   const [currentEditIndex, setCurrentEditIndex] = useState(0);
-  const [_, setIsEditDialogOpen] = useState(false);
+  const [_isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     GetWines().then((data) => {
@@ -124,7 +114,6 @@ function App() {
 
   const addForm = useForm<services.Wine>({
     defaultValues: {
-      Winery: "",
       Varietal: "",
       Description: "",
       Type: "Red",
@@ -140,7 +129,6 @@ function App() {
 
   const editForm = useForm<services.Wine>({
     defaultValues: {
-      Winery: "",
       Varietal: "",
       Description: "",
       Type: "Red",
@@ -190,41 +178,6 @@ function App() {
     });
     table.resetColumnFilters();
     table.resetGlobalFilter();
-  };
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files?.[0]) {
-      try {
-        const file = event.target.files[0];
-
-        // Immediately process the file
-        const ab = await file.arrayBuffer();
-        const u = new Uint8Array(ab);
-        const base64 = btoa(String.fromCharCode(...u));
-
-        await ImportFileFromJstoGo(base64);
-
-        // Refresh data
-        const data = await GetWines();
-        setWines(data);
-        setIsInitialLoad(false);
-
-        // Reset input
-        if (fileInputRef.current) fileInputRef.current.value = "";
-
-        toast({
-          title: "Success!",
-          description: `Imported ${data.length} wines successfully`,
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to import file",
-          variant: "destructive",
-        });
-      }
-    }
   };
 
   const addWine = async (wine: services.Wine) => {
@@ -288,6 +241,7 @@ function App() {
       setIsEditDialogOpen(false);
     }
   };
+
   const submitAllUpdates = async (updatedWines: services.Wine[]) => {
     try {
       // Call your API endpoint here
@@ -346,9 +300,6 @@ function App() {
     globalFilterFn: "includesString",
   });
 
-  // const [dateInputStates, setDateInputStates] = useState<
-  //   Record<string, boolean>
-  // >({});
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
   return (
@@ -362,7 +313,7 @@ function App() {
               table.setGlobalFilter(e.target.value);
             }}
             placeholder="Search any column..."
-            className="w-full" // Make input take full width of container
+            className="w-full"
           />
         </div>
       </div>
@@ -373,70 +324,10 @@ function App() {
       </div>
       <div className="mt-4">
         <div className="flex justify-between items-center w-full rounded-md max-h-[33vh] min-h-[3vh]">
-          <div className="flex min-w-[300px] [-webkit-app-region:no-drag]">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  Columns <ChevronDown />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {/* Existing column checkboxes */}
-                {table
-                  .getAllColumns()
-                  .filter(
-                    (column) =>
-                      column.getCanHide() && column.id !== "select-col"
-                  )
-                  .map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => {
-                        if (!value) column.setFilterValue("");
-                        column.toggleVisibility(!!value);
-                      }}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  ))}
+          {/* <div></div> */}
 
-                {/* Add divider and action buttons */}
-                <DropdownMenuSeparator />
-                <div className="flex flex-col gap-1 p-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      table
-                        .getAllColumns()
-                        .filter(
-                          (col) => col.getCanHide() && col.id !== "select-col"
-                        )
-                        .forEach((col) => col.toggleVisibility(true));
-                    }}
-                  >
-                    Select All
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      table
-                        .getAllColumns()
-                        .filter(
-                          (col) => col.getCanHide() && col.id !== "select-col"
-                        )
-                        .forEach((col) => col.toggleVisibility(false));
-                    }}
-                  >
-                    Deselect All
-                  </Button>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex min-w-[300px] [-webkit-app-region:no-drag]">
+            <ColumnVisibilityDropDown table={table} />
             <Button
               variant="outline"
               onClick={() => setShowSelectedOnly(!showSelectedOnly)}
@@ -449,20 +340,12 @@ function App() {
               <Button variant="outline">Locate Selected</Button>
             )}
           </div>
-
+          {/* file importer */}
           <div className="absolute left-1/2 -translate-x-1/2">
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                className="hidden"
-                ref={fileInputRef}
-                onChange={onFileChange}
-              />
-              <div className="flex items-center p-2 border rounded hover:bg-gray-50 gap-2">
-                <File className="h-4 w-4 text-blue-600" />
-                <span className="text-sm">Import File</span>
-              </div>
-            </label>
+            <FileImporter
+              setWines={setWines}
+              setIsInitialLoad={setIsInitialLoad}
+            />
           </div>
 
           <div className="min-w-[100px] text-right">
@@ -887,24 +770,24 @@ function App() {
             </TableBody>
           </Table>
         </div>
-        <div
-          key={wines.length}
-          className="sticky bottom-0 bg-white border-t p-2"
-        >
+        <div className="sticky bottom-0 bg-white border-t p-2">
           <div className="text-sm text-muted-foreground leading-tight text-center">
-            {isInitialLoad ? (
-              "Loading..."
-            ) : (
+            {table.getRowModel().rows.length > 0 ? (
               <>
                 {Object.keys(rowSelection).length} of{" "}
                 {showSelectedOnly
                   ? Object.keys(rowSelection).length
-                  : wines.length}{" "}
+                  : table.getFilteredRowModel().rows.length}{" "}
                 row(s) selected.
                 {table.getState().columnFilters.length > 0 && (
-                  <span className="ml-2">(From {wines.length} total)</span>
+                  <span className="ml-2">
+                    (Filtered from {table.getPreFilteredRowModel().rows.length}{" "}
+                    total)
+                  </span>
                 )}
               </>
+            ) : (
+              "No results found"
             )}
           </div>
         </div>

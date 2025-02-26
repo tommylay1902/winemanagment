@@ -10,6 +10,10 @@ export function DeleteWines(arg1) {
   return window['go']['main']['App']['DeleteWines'](arg1);
 }
 
+export function GetAllWineries() {
+  return window['go']['main']['App']['GetAllWineries']();
+}
+
 export function GetWines() {
   return window['go']['main']['App']['GetWines']();
 }
