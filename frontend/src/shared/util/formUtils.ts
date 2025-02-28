@@ -1,7 +1,6 @@
 // src/shared/util/formUtils.ts
 
 import { FormFieldConfig } from "../form/wineForm"; // Import your config type
-
 // Type guard for numeric fields
 export const isNumberField = (
   field: FormFieldConfig
@@ -16,6 +15,11 @@ export const getInputValue = (
 ): string => {
   if (value === null || value === undefined) return "";
   if (type === "number") return value.toString();
+  return String(value);
+};
+
+export const getWineryInputValue = (value: unknown): string => {
+  if (value === null || value === undefined) return "";
   return String(value);
 };
 

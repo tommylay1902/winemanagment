@@ -150,6 +150,22 @@ func (a *App) GetAllWineries() []services.Winery {
 	return wineries
 }
 
+func (a *App) AddWinery(data string) (*uint, error) {
+	var winery services.Winery
+	if err := json.Unmarshal([]byte(data), &winery); err != nil {
+		return nil, fmt.Errorf("error unmarshaling winery data: %w", err)
+	}
+
+	fmt.Println("hell!!!", winery.Name)
+
+	_, err := a.dbService.CreateWinery(winery.Name)
+
+	if err != nil {
+		return nil, err
+	}
+	return &winery.ID, nil
+}
+
 func (a *App) AddWine(data string) (*uint, error) {
 	var wine services.Wine
 	if err := json.Unmarshal([]byte(data), &wine); err != nil {

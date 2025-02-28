@@ -15,8 +15,6 @@ export type FormFieldConfig = {
   description?: string;
 };
 
-//,Notes,Location,Row,Bin,Code
-
 // Form configuration using Zod schema metadata
 export const formConfig: FormFieldConfig[] = [
   {

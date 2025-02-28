@@ -4,6 +4,8 @@ import {services} from '../models';
 
 export function AddWine(arg1:string):Promise<any>;
 
+export function AddWinery(arg1:string):Promise<any>;
+
 export function DeleteWines(arg1:Array<string>):Promise<void>;
 
 export function GetAllWineries():Promise<Array<services.Winery>>;

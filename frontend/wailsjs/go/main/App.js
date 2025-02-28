@@ -6,6 +6,10 @@ export function AddWine(arg1) {
   return window['go']['main']['App']['AddWine'](arg1);
 }
 
+export function AddWinery(arg1) {
+  return window['go']['main']['App']['AddWinery'](arg1);
+}
+
 export function DeleteWines(arg1) {
   return window['go']['main']['App']['DeleteWines'](arg1);
 }

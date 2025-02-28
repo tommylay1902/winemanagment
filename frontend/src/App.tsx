@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarIcon } from "lucide-react";
 
 import { AddWine, GetWines, DeleteWines } from "../wailsjs/go/main/App.js";
@@ -74,6 +74,7 @@ function App() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([]);
   const [filtering, setFiltering] = useState<ColumnFiltersState>([]);
+  const [filterResetCounter, setFilterResetCounter] = useState(0);
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     Winery: false,
@@ -171,13 +172,18 @@ function App() {
   const { toast } = useToast();
 
   const resetFilters = () => {
+    table.resetColumnFilters();
+    // table.resetGlobalFilter();
     table.getAllColumns().forEach((column) => {
       if (column.columnDef.meta?.filterVariant === "select") {
         column.setFilterValue("");
       }
+      if (column.columnDef.meta?.filterVariant === "select-winery") {
+        column.setFilterValue("");
+      }
     });
-    table.resetColumnFilters();
-    table.resetGlobalFilter();
+
+    setFilterResetCounter((prev) => prev + 1);
   };
 
   const addWine = async (wine: services.Wine) => {
@@ -264,7 +270,8 @@ function App() {
     }
   };
 
-  const columns = generateHeaders(sorting);
+  // const columns = generateHeaders(sorting);
+  const columns = useMemo(() => generateHeaders(sorting), [sorting]);
 
   const table = useReactTable({
     data: wines,
@@ -740,7 +747,10 @@ function App() {
 
                       {header.column.getCanFilter() ? (
                         <div>
-                          <Filter column={header.column} />
+                          <Filter
+                            column={header.column}
+                            resetKey={filterResetCounter}
+                          />
                         </div>
                       ) : null}
                     </TableHead>
