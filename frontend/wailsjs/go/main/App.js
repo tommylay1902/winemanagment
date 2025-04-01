@@ -29,3 +29,7 @@ export function ImportFileFromJstoGo(arg1) {
 export function SelectFile() {
   return window['go']['main']['App']['SelectFile']();
 }
+
+export function UpdateWines(arg1) {
+  return window['go']['main']['App']['UpdateWines'](arg1);
+}

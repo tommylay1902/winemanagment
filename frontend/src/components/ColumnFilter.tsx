@@ -254,12 +254,6 @@ export function Filter({
       <DropdownMenuContent
         align="end"
         className="w-48 max-h-[50vh] overflow-y-auto p-0"
-        onKeyDown={(e) => {
-          // Prevent default dropdown keyboard navigation when typing in search
-          if (e.target instanceof HTMLInputElement) {
-            e.stopPropagation();
-          }
-        }}
       >
         <div className="sticky top-0 bg-background z-10 p-2 border-b">
           <input
@@ -272,7 +266,6 @@ export function Filter({
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
               e.stopPropagation();
-              e.nativeEvent.stopImmediatePropagation();
             }}
           />
         </div>

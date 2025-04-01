@@ -15,3 +15,5 @@ export function GetWines():Promise<Array<services.Wine>>;
 export function ImportFileFromJstoGo(arg1:string):Promise<void>;
 
 export function SelectFile():Promise<string>;
+
+export function UpdateWines(arg1:Array<services.Wine>):Promise<void>;

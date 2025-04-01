@@ -56,7 +56,6 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 func (a *App) DeleteWines(id []string) error {
-	fmt.Println(id)
 	var uintIDs []uint
 	for _, idStr := range id {
 		id, err := strconv.ParseUint(idStr, 10, 64)
@@ -156,8 +155,6 @@ func (a *App) AddWinery(data string) (*uint, error) {
 		return nil, fmt.Errorf("error unmarshaling winery data: %w", err)
 	}
 
-	fmt.Println("hell!!!", winery.Name)
-
 	_, err := a.dbService.CreateWinery(winery.Name)
 
 	if err != nil {
@@ -177,4 +174,14 @@ func (a *App) AddWine(data string) (*uint, error) {
 	}
 
 	return &wine.ID, nil
+}
+
+func (a *App) UpdateWines(wines []services.Wine) error {
+	err := a.dbService.BatchUpdateWines(wines)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

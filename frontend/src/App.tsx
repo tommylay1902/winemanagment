@@ -1,34 +1,8 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarIcon } from "lucide-react";
-
-import { AddWine, GetWines, DeleteWines } from "../wailsjs/go/main/App.js";
-
-import {
-  ColumnFiltersState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  RowSelectionState,
-  SortingState,
-  useReactTable,
-  VisibilityState,
-} from "@tanstack/react-table";
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./components/ui/table.js";
-
-import { generateHeaders } from "./shared/util/GenerateWineTableHeaders.js";
+import { UpdateWines } from "../wailsjs/go/main/App.js";
 import { Input } from "./components/ui/input.js";
-import { useToast } from "./hooks/use-toast.js";
-
 import { services } from "wailsjs/go/models.js";
 import {
   Dialog,
@@ -53,10 +27,8 @@ import { formConfig } from "./shared/form/wineForm.js";
 import { Checkbox } from "./components/ui/checkbox.js";
 import { getInputValue } from "./shared/util/formUtils.js";
 import { stringToUSDate } from "./shared/util/Date.js";
-import { Filter } from "./components/ColumnFilter.js";
 
 import { Button } from "./components/ui/button.js";
-import { Wine } from "./shared/types/Wine.js";
 import {
   Popover,
   PopoverContent,
@@ -66,54 +38,37 @@ import { Calendar } from "./components/ui/calendar.js";
 import { cn } from "./lib/utils.js";
 import ColumnVisibilityDropDown from "./components/ColumnVisibilityDropDown.js";
 import FileImporter from "./components/FileImporter.js";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "./components/ui/select.js";
+import { useWineData } from "./hooks/useWineData.js";
+import WineTable from "./components/WineTable/WineTable.js";
+import { useWineTable } from "./hooks/useWineTable.js";
+import { NewWine, useWineActions } from "./hooks/useWineAction.js";
 
 function App() {
   const [updatedWines, setUpdatedWines] = useState<services.Wine[]>([]);
-  const [wines, setWines] = useState<services.Wine[]>([]);
-  // const [newId, setNewId] = useState<number>(0);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [filtering, setFiltering] = useState<ColumnFiltersState>([]);
   const [filterResetCounter, setFilterResetCounter] = useState(0);
-
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    Winery: false,
-    Type: false,
-    Year: false,
-    Aging: false,
-    Description: true,
-    Notes: false,
-    Name: false,
-    Price: false,
-    Premium: false,
-    "Special Occasion": false,
-    "Drink By": false,
-    Row: false,
-    Bin: false,
-    Code: false,
-  });
   const [_initalLoad, setIsInitialLoad] = useState(true);
-  const [globalFilter, setGlobalFilter] = useState<any>([]);
   const [date, setDate] = useState<string>("");
   const [selectedWines, setSelectedWines] = useState<services.Wine[]>([]);
   const [currentEditIndex, setCurrentEditIndex] = useState(0);
   const [_isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
-  useEffect(() => {
-    GetWines().then((data) => {
-      console.log(data);
-      setWines(data);
-      setIsInitialLoad(false);
-    });
-  }, []);
+  const { wines, setWines, wineryList } = useWineData();
+  //updateWine, batchUpdateWines
+  const { addWine, deleteWines } = useWineActions(setWines);
 
-  useEffect(() => {
-    if (wines.length > 0) {
-      // setNewId(wines[wines.length - 1].ID);
-    }
-  }, [wines]);
+  const { table, rowSelection } = useWineTable(wines);
 
-  const addForm = useForm<services.Wine>({
+  const addForm = useForm<NewWine>({
     defaultValues: {
       Varietal: "",
       Description: "",
@@ -130,6 +85,7 @@ function App() {
 
   const editForm = useForm<services.Wine>({
     defaultValues: {
+      WineryID: undefined,
       Varietal: "",
       Description: "",
       Type: "Red",
@@ -169,7 +125,39 @@ function App() {
     }
   }, [currentEditIndex, updatedWines, editForm]);
 
-  const { toast } = useToast();
+  //work here
+  const handleEditSubmit = async (formData: services.Wine) => {
+    const originalWine = selectedWines[currentEditIndex];
+
+    const updatedWine: services.Wine = {
+      ...originalWine,
+      ...formData,
+      DrinkBy: date === "" ? null : date,
+      ID: originalWine.ID,
+      convertValues: originalWine.convertValues,
+    };
+
+    // Create a new array with all previous updates plus this one
+    const newUpdatedWines = [...updatedWines];
+    newUpdatedWines[currentEditIndex] = updatedWine;
+    setUpdatedWines(newUpdatedWines);
+
+    // Immediately save this wine's changes
+    try {
+      await UpdateWines([updatedWine]); // Update just this one wine
+
+      // Update local state
+      setWines((prev) =>
+        prev.map((w) => (w.ID === updatedWine.ID ? updatedWine : w))
+      );
+
+      if (currentEditIndex < selectedWines.length - 1) {
+        setCurrentEditIndex((prev) => prev + 1);
+      } else {
+        setIsEditDialogOpen(false);
+      }
+    } catch (error) {}
+  };
 
   const resetFilters = () => {
     table.resetColumnFilters();
@@ -186,137 +174,17 @@ function App() {
     setFilterResetCounter((prev) => prev + 1);
   };
 
-  const addWine = async (wine: services.Wine) => {
-    wine.DrinkBy = date;
-    if (date === null || date === "") wine.DrinkBy = null;
-
-    const id = await AddWine(JSON.stringify(wine));
-    wine.ID = id;
-    setWines((prev) => [...prev, wine]);
-    toast({
-      title: "Success!",
-      description: `Successfully added ${wine.Varietal}`,
-    });
-  };
-
-  const deleteWines = async () => {
-    try {
-      const ids = Object.keys(rowSelection);
-      await DeleteWines(ids);
-
-      const numericIds = ids.map((id) => parseInt(id));
-
-      setWines((prev) => prev.filter((w) => !numericIds.includes(w.ID)));
-      setRowSelection({});
-      toast({
-        title: "Success!",
-        description: `Successfully Deleted ${ids.length} wine(s)`,
-      });
-    } catch (error) {
-      toast({
-        title: "Something went wrong",
-        description: `Something went wrong when trying to delete...`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEditSubmit = (formData: services.Wine) => {
-    // Get the original wine to preserve methods
-    const originalWine = selectedWines[currentEditIndex];
-
-    // Merge changes while preserving original methods
-    const updatedWine: services.Wine = {
-      ...originalWine, // Preserves convertValues and other methods
-      ...formData, // Applies form changes
-      DrinkBy: date, // Add explicit date field
-      ID: originalWine.ID,
-      convertValues: originalWine.convertValues,
-    };
-
-    // Update the modified wines array
-    const newUpdatedWines = [...updatedWines];
-    newUpdatedWines[currentEditIndex] = updatedWine;
-    setUpdatedWines(newUpdatedWines);
-
-    // Rest of your existing logic...
-    if (currentEditIndex < selectedWines.length - 1) {
-      setCurrentEditIndex((prev) => prev + 1);
-    } else {
-      submitAllUpdates(newUpdatedWines);
-      setIsEditDialogOpen(false);
-    }
-  };
-
-  const submitAllUpdates = async (updatedWines: services.Wine[]) => {
-    try {
-      // Call your API endpoint here
-      // await UpdateWines(updatedWines);
-
-      // Update local state
-      const newWines = wines.map((wine) => {
-        const updated = updatedWines.find((u) => u.ID === wine.ID);
-        return updated || wine;
-      });
-      setWines(newWines);
-
-      toast({ title: "Success!", description: "All changes saved" });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save changes",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // const columns = generateHeaders(sorting);
-  const columns = useMemo(() => generateHeaders(sorting), [sorting]);
-
-  const table = useReactTable({
-    data: wines,
-    columns,
-    filterFns: {
-      numericRange: (row, columnId, filterValue) => {
-        const value = row.getValue(columnId) as number;
-        const [min, max] = filterValue || [null, null];
-
-        if (min !== null && max !== null) return value >= min && value <= max;
-        if (min !== null) return value >= min;
-        if (max !== null) return value <= max;
-        return true;
-      },
-    },
-    getCoreRowModel: getCoreRowModel<Wine>(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onRowSelectionChange: setRowSelection,
-    onColumnFiltersChange: setFiltering,
-    enableRowSelection: true,
-    state: {
-      columnFilters: filtering,
-      sorting,
-      rowSelection,
-      columnVisibility,
-      globalFilter,
-    },
-    onColumnVisibilityChange: setColumnVisibility,
-    onSortingChange: setSorting,
-    getRowId: (row) => row.ID + "",
-    autoResetPageIndex: false, // Add this line
-    globalFilterFn: "includesString",
-  });
-
-  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  //here here here
+  // const table = useWineTable();
 
   return (
     <>
       <div className="w-full flex justify-center mt-4 fixed top-0 left-0 right-0">
         <div className="max-w-2xl w-full px-4">
           <Input
-            value={globalFilter ?? ""}
+            value={table.getState().globalFilter ?? ""}
             onChange={(e) => {
-              setGlobalFilter(e.target.value);
+              // setGlobalFilter(e.target.value);
               table.setGlobalFilter(e.target.value);
             }}
             placeholder="Search any column..."
@@ -422,104 +290,150 @@ function App() {
                           </div>
                           {formConfig
                             .filter((field) => field.type !== "checkbox")
-                            .map((field) => (
-                              <FormField
-                                key={field.name}
-                                control={editForm.control}
-                                name={field.name}
-                                render={({ field: formField }) => (
-                                  <FormItem>
-                                    {field.type === "date" ? (
-                                      <div className="flex flex-col space-y-2">
-                                        <FormLabel>{field.label}</FormLabel>
-                                        <div className="relative">
-                                          <Popover>
-                                            <PopoverTrigger asChild>
-                                              <Button
-                                                variant={"outline"}
-                                                className={cn(
-                                                  "w-[240px] justify-start text-left font-normal",
-                                                  !date &&
-                                                    "text-muted-foreground"
-                                                )}
+                            .map((field) => {
+                              return (
+                                <FormField
+                                  key={field.name}
+                                  control={editForm.control}
+                                  name={field.name}
+                                  render={({ field: formField }) => (
+                                    <FormItem>
+                                      {field.type === "date" ? (
+                                        <div className="flex flex-col space-y-2">
+                                          <FormLabel>{field.label}</FormLabel>
+                                          <div className="relative">
+                                            <Popover>
+                                              <PopoverTrigger asChild>
+                                                <Button
+                                                  variant={"outline"}
+                                                  className={cn(
+                                                    "w-[240px] justify-start text-left font-normal",
+                                                    !date &&
+                                                      "text-muted-foreground"
+                                                  )}
+                                                >
+                                                  <CalendarIcon />
+                                                  {date ? (
+                                                    stringToUSDate(date)
+                                                  ) : (
+                                                    <span>Pick a date</span>
+                                                  )}
+                                                </Button>
+                                              </PopoverTrigger>
+                                              <PopoverContent
+                                                className="w-auto p-0"
+                                                align="start"
                                               >
-                                                <CalendarIcon />
-                                                {date ? (
-                                                  stringToUSDate(date)
-                                                ) : (
-                                                  <span>Pick a date</span>
-                                                )}
-                                              </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent
-                                              className="w-auto p-0"
-                                              align="start"
-                                            >
-                                              <Calendar
-                                                mode="single"
-                                                selected={new Date(date)}
-                                                onSelect={(date) => {
-                                                  if (date) {
-                                                    setDate(date.toISOString());
-                                                  }
+                                                <Calendar
+                                                  mode="single"
+                                                  selected={new Date(date)}
+                                                  onSelect={(date) => {
+                                                    if (date) {
+                                                      setDate(
+                                                        date.toISOString()
+                                                      );
+                                                    }
+                                                  }}
+                                                  initialFocus
+                                                />
+                                              </PopoverContent>
+                                            </Popover>
+                                            {(formField.value || date) && (
+                                              <Button
+                                                type="button"
+                                                className="ml-3 mb-3"
+                                                onClick={() => {
+                                                  editForm.setValue(
+                                                    field.name,
+                                                    ""
+                                                  );
+                                                  setDate("");
                                                 }}
-                                                initialFocus
-                                              />
-                                            </PopoverContent>
-                                          </Popover>
-                                          {(formField.value || date) && (
-                                            <Button
-                                              type="button"
-                                              className="ml-3 mb-3"
-                                              onClick={() => {
-                                                editForm.setValue(
-                                                  field.name,
-                                                  ""
-                                                );
-                                                setDate("");
-                                              }}
-                                              aria-label="Clear date"
-                                              tabIndex={-1}
-                                            >
-                                              Clear Date
-                                            </Button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <>
-                                        <FormLabel>{field.label}</FormLabel>
-                                        <FormControl>
-                                          <Input
-                                            {...formField}
-                                            placeholder={field.placeholder}
-                                            type={field.type}
-                                            value={getInputValue(
-                                              formField.value,
-                                              field.type
+                                                aria-label="Clear date"
+                                                tabIndex={-1}
+                                              >
+                                                Clear Date
+                                              </Button>
                                             )}
-                                            onChange={(e) => {
-                                              if (field.type === "number") {
-                                                const value = Number(
-                                                  e.target.value
-                                                );
-                                                formField.onChange(
-                                                  isNaN(value) ? 0 : value
-                                                );
-                                              } else {
-                                                formField.onChange(
-                                                  e.target.value
-                                                );
+                                          </div>
+                                        </div>
+                                      ) : field.label === "Winery Name" ? (
+                                        <>
+                                          <FormLabel>Winery</FormLabel>
+                                          <FormControl>
+                                            <Select
+                                              value={
+                                                formField.value
+                                                  ? String(formField.value)
+                                                  : ""
                                               }
-                                            }}
-                                          />
-                                        </FormControl>
-                                      </>
-                                    )}
-                                  </FormItem>
-                                )}
-                              />
-                            ))}
+                                              onValueChange={(value) => {
+                                                formField.onChange(
+                                                  Number(value)
+                                                );
+                                              }}
+                                            >
+                                              <SelectTrigger className="w-[180px]">
+                                                <SelectValue placeholder="Select a winery">
+                                                  {wineryList.find(
+                                                    (w) =>
+                                                      w.ID === formField.value
+                                                  )?.Name || "Select a winery"}
+                                                </SelectValue>
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectGroup>
+                                                  <SelectLabel>
+                                                    Winery
+                                                  </SelectLabel>
+                                                  {wineryList.map((winery) => (
+                                                    <SelectItem
+                                                      key={winery.ID}
+                                                      value={String(winery.ID)}
+                                                    >
+                                                      {winery.Name}
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectGroup>
+                                              </SelectContent>
+                                            </Select>
+                                          </FormControl>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FormLabel>{field.label}</FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...formField}
+                                              placeholder={field.placeholder}
+                                              type={field.type}
+                                              value={getInputValue(
+                                                formField.value,
+                                                field.type
+                                              )}
+                                              onChange={(e) => {
+                                                if (field.type === "number") {
+                                                  const value = Number(
+                                                    e.target.value
+                                                  );
+                                                  formField.onChange(
+                                                    isNaN(value) ? 0 : value
+                                                  );
+                                                } else {
+                                                  formField.onChange(
+                                                    e.target.value
+                                                  );
+                                                }
+                                              }}
+                                            />
+                                          </FormControl>
+                                        </>
+                                      )}
+                                    </FormItem>
+                                  )}
+                                />
+                              );
+                            })}
                           <DialogFooter className="flex items-center justify-between">
                             <div className="flex gap-2">
                               <Button
@@ -549,7 +463,7 @@ function App() {
                               {currentEditIndex + 1} of {selectedWines.length}
                             </div>
                             <div>
-                              <Button type="submit">Save Changes</Button>
+                              <Button type="submit">Update Current Wine</Button>
                             </div>
                           </DialogFooter>
                         </form>
@@ -561,7 +475,7 @@ function App() {
                 <Button
                   variant="outline"
                   className=" bg-accent h-9 px-4 py-1 -mb-[1px] hover:bg-white hover:scale-110 hover:border-b-0"
-                  onClick={deleteWines}
+                  onClick={() => deleteWines(rowSelection, wines)}
                 >
                   Delete Wine(s)
                 </Button>
@@ -588,7 +502,11 @@ function App() {
                 <div className="grid gap-4 py-4">
                   <Form {...addForm}>
                     <form
-                      onSubmit={addForm.handleSubmit(addWine)}
+                      onSubmit={() =>
+                        addForm.handleSubmit((formData) =>
+                          addWine(formData, date)
+                        )
+                      }
                       className="space-y-4"
                     >
                       <div className="flex flex-row items-center justify-between">
@@ -729,56 +647,11 @@ function App() {
         </div>
 
         <div className="rounded-md border max-h-[calc(100vh-33vh)] overflow-auto">
-          <Table className="">
-            <TableHeader className="bg-slate-200 sticky top-0 z-100 border-t shadow-sm p-4 ">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      className="p-4 sticky top-0 text-black font-bold"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-
-                      {header.column.getCanFilter() ? (
-                        <div>
-                          <Filter
-                            column={header.column}
-                            resetKey={filterResetCounter}
-                          />
-                        </div>
-                      ) : null}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody className="relative">
-              {(showSelectedOnly
-                ? table.getSelectedRowModel().rows
-                : table.getRowModel().rows
-              ).map((row) => (
-                <TableRow
-                  key={row.id}
-                  className={row.getIsSelected() ? "bg-slate-400" : ""}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <WineTable
+            table={table}
+            showSelectedOnly={showSelectedOnly}
+            filterResetCounter={filterResetCounter}
+          />
         </div>
         <div className="sticky bottom-0 bg-white border-t p-2">
           <div className="text-sm text-muted-foreground leading-tight text-center">

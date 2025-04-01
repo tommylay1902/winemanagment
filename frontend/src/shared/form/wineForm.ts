@@ -18,10 +18,10 @@ export type FormFieldConfig = {
 // Form configuration using Zod schema metadata
 export const formConfig: FormFieldConfig[] = [
   {
-    name: "Winery",
+    name: "WineryID",
     label: "Winery Name",
-    type: "text",
-    placeholder: "Enter winery name",
+    type: "select",
+    placeholder: "Select winery",
     description: "Official name of the winery",
   },
   {

@@ -249,6 +249,25 @@ func (s *DatabaseService) CreateWinery(name string) (*Winery, error) {
 	return &winery, result.Error
 }
 
+func (s *DatabaseService) BatchUpdateWines(wines []Wine) error {
+	// Start a transaction
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	for _, wine := range wines {
+		if err := tx.Model(&Wine{}).Where("id = ?", wine.ID).Updates(wine).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to update wine %d: %v", wine.ID, err)
+		}
+	}
+
+	return tx.Commit().Error
+}
+
 func (s *DatabaseService) Close() error {
 	sqlDB, err := s.db.DB()
 	if err != nil {

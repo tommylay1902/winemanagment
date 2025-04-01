@@ -2,7 +2,7 @@
 import { z } from "zod";
 
 export const wineFormSchema = z.object({
-  Winery: z.string().min(2, "Winery must be at least 2 characters"),
+  WineryID: z.number(),
   Varietal: z.string().min(2, "Varietal must be at least 2 characters"),
   Description: z.string().optional(),
   Type: z.enum(["Red", "White", "Rosé", "Sparkling", "Dessert"]),
